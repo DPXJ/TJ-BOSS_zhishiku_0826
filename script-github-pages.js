@@ -15,8 +15,8 @@ console.log('🌐 API_BASE:', API_BASE);
 // GitHub Pages环境静默检测，不显示弹窗
 if (!isLocalEnv) {
     console.log('🌐 GitHub Pages环境已启用');
-    console.log('🚀 飞书API通过cors-anywhere代理调用');
-    console.log('💡 首次使用需访问 https://cors-anywhere.herokuapp.com/corsdemo 激活');
+    console.log('🚀 飞书API通过Vercel无服务器代理调用');
+    console.log('✅ 无需额外激活，开箱即用');
 }
 
 // API配置 - 用户配置信息
@@ -1971,10 +1971,10 @@ async function syncToFeishuTable(accessToken) {
         recordData
     });
     
-    // 调用飞书多维表格API - 本地用代理，线上用cors-anywhere
+    // 调用飞书多维表格API - 本地用代理，线上用Vercel代理
     const apiUrl = isLocalEnv 
         ? `http://localhost:3002/feishu-proxy/bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`
-        : `https://cors-anywhere.herokuapp.com/https://open.feishu.cn/open-apis/bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`;
+        : `/api/feishu-proxy?path=${encodeURIComponent(`bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`)}`;
     const requestOptions = {
         method: 'POST',
         headers: {
@@ -2126,10 +2126,10 @@ async function getFeishuAccessToken() {
         throw new Error('请先配置飞书App ID和App Secret');
     }
     
-    // 本地用代理避免CORS，线上用cors-anywhere
+    // 本地用代理避免CORS，线上用Vercel代理
     const apiUrl = isLocalEnv 
         ? 'http://localhost:3002/feishu-proxy/auth/v3/tenant_access_token/internal'
-        : 'https://cors-anywhere.herokuapp.com/https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal';
+        : '/api/feishu-proxy?path=' + encodeURIComponent('auth/v3/tenant_access_token/internal');
     const requestBody = {
         app_id: API_CONFIG.FEISHU.appId,
         app_secret: API_CONFIG.FEISHU.appSecret
@@ -2191,10 +2191,10 @@ async function getFeishuAccessToken() {
 
 // 创建飞书文档
 async function createFeishuDoc(accessToken, title, content) {
-    // 飞书API调用创建文档 - 本地用代理，线上用cors-anywhere
+    // 飞书API调用创建文档 - 本地用代理，线上用Vercel代理
     const apiUrl = isLocalEnv
         ? 'http://localhost:3002/feishu-proxy/docx/v1/documents'
-        : 'https://cors-anywhere.herokuapp.com/https://open.feishu.cn/open-apis/docx/v1/documents';
+        : '/api/feishu-proxy?path=' + encodeURIComponent('docx/v1/documents');
     const requestOptions = {
         method: 'POST',
         headers: {
@@ -2241,10 +2241,10 @@ async function updateFeishuDocContent(accessToken, docToken, content) {
     // 转换markdown为飞书文档格式
     const blocks = convertMarkdownToFeishuBlocks(content);
     
-    // 飞书API调用更新文档 - 本地用代理，线上用cors-anywhere
+    // 飞书API调用更新文档 - 本地用代理，线上用Vercel代理
     const apiUrl = isLocalEnv
         ? `http://localhost:3002/feishu-proxy/docx/v1/documents/${docToken}/blocks/batch_update`
-        : `https://cors-anywhere.herokuapp.com/https://open.feishu.cn/open-apis/docx/v1/documents/${docToken}/blocks/batch_update`;
+        : '/api/feishu-proxy?path=' + encodeURIComponent(`docx/v1/documents/${docToken}/blocks/batch_update`);
     const requestOptions = {
         method: 'PATCH',
         headers: {
