@@ -1907,7 +1907,66 @@ function downloadGeneratedContent() {
     showToast(`文件已下载：${filename}`, 'success');
 }
 
-// 同步到飞书文档
+// 同步到飞书多维表格
+async function syncToFeishuTable(accessToken) {
+    const topicEl = document.getElementById('topic');
+    const wordCountEl = document.getElementById('word-count');
+    const notesEl = document.getElementById('notes');
+    
+    // 获取数据
+    const title = topicEl ? topicEl.value.trim() || '生成内容' : '生成内容';
+    const content = appState.generatedContent;
+    const wordCount = wordCountEl ? parseInt(wordCountEl.value) || content.length : content.length;
+    const notes = notesEl ? notesEl.value.trim() || '' : '';
+    const currentTime = new Date().toLocaleString('zh-CN');
+    
+    // 构建表格记录
+    const recordData = {
+        "fields": {
+            "标题": title,
+            "内容": content,
+            "字数": wordCount,
+            "创建时间": currentTime,
+            "风格类型": "正式严谨", // 可以根据实际风格分析结果设置
+            "补充说明": notes,
+            "状态": "草稿"
+        }
+    };
+    
+    console.log('📊 准备同步到多维表格:', {
+        appToken: API_CONFIG.FEISHU.appToken,
+        tableId: API_CONFIG.FEISHU.tableId,
+        recordData
+    });
+    
+    // 调用飞书多维表格API
+    const apiUrl = `https://open.feishu.cn/open-apis/bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`;
+    const requestOptions = {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(recordData)
+    };
+    
+    console.log('🔗 多维表格API调用:', { apiUrl, requestOptions });
+    
+    const response = await fetch(apiUrl, requestOptions);
+    
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ 多维表格API错误响应:', { status: response.status, statusText: response.statusText, errorText });
+        throw new Error(`多维表格同步失败: ${response.status} - ${response.statusText}\n${errorText}`);
+    }
+    
+    const result = await response.json();
+    console.log('✅ 多维表格同步成功:', result);
+    
+    return result;
+}
+
+// 同步到飞书（文档或多维表格）
 async function syncToFeishu() {
     if (!appState.generatedContent) {
         showToast('没有可同步的内容', 'warning');
@@ -1929,35 +1988,49 @@ async function syncToFeishu() {
             syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
         }
         
-        showToast('正在同步到飞书文档...', 'info');
-        
         // 获取访问令牌
         const accessToken = await getFeishuAccessToken();
+        let resultUrl;
         
-        // 获取主题作为文档标题
-        const topicEl = document.getElementById('topic');
-        const title = topicEl ? topicEl.value.trim() || '生成内容' : '生成内容';
-        
-        let docUrl;
-        
-        if (API_CONFIG.FEISHU.docToken) {
-            // 更新现有文档
-            docUrl = await updateFeishuDoc(accessToken, API_CONFIG.FEISHU.docToken, appState.generatedContent);
-        } else {
-            // 创建新文档
-            const result = await createFeishuDoc(accessToken, title, appState.generatedContent);
-            docUrl = result.url;
+        // 检查是否配置了多维表格参数
+        if (API_CONFIG.FEISHU.appToken && API_CONFIG.FEISHU.tableId) {
+            // 同步到多维表格
+            showToast('正在同步到飞书多维表格...', 'info');
+            const result = await syncToFeishuTable(accessToken);
+            resultUrl = `https://feishu.cn/base/${API_CONFIG.FEISHU.appToken}?table=${API_CONFIG.FEISHU.tableId}`;
+            showToast('已成功同步到飞书多维表格', 'success');
             
-            // 保存文档Token供下次使用
-            API_CONFIG.FEISHU.docToken = result.docToken;
-            saveConfigToStorage();
-        }
-        
-        showToast('已成功同步到飞书文档', 'success');
-        
-        // 询问是否打开文档
-        if (confirm('同步成功！是否打开飞书文档？')) {
-            window.open(docUrl, '_blank');
+            // 询问是否打开表格
+            if (confirm('同步成功！是否打开飞书多维表格？')) {
+                window.open(resultUrl, '_blank');
+            }
+        } else {
+            // 同步到文档（保持原有功能）
+            showToast('正在同步到飞书文档...', 'info');
+            
+            // 获取主题作为文档标题
+            const topicEl = document.getElementById('topic');
+            const title = topicEl ? topicEl.value.trim() || '生成内容' : '生成内容';
+            
+            if (API_CONFIG.FEISHU.docToken) {
+                // 更新现有文档
+                resultUrl = await updateFeishuDoc(accessToken, API_CONFIG.FEISHU.docToken, appState.generatedContent);
+            } else {
+                // 创建新文档
+                const result = await createFeishuDoc(accessToken, title, appState.generatedContent);
+                resultUrl = result.url;
+                
+                // 保存文档Token供下次使用
+                API_CONFIG.FEISHU.docToken = result.docToken;
+                saveConfigToStorage();
+            }
+            
+            showToast('已成功同步到飞书文档', 'success');
+            
+            // 询问是否打开文档
+            if (confirm('同步成功！是否打开飞书文档？')) {
+                window.open(resultUrl, '_blank');
+            }
         }
         
     } catch (error) {
