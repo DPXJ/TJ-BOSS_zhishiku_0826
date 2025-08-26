@@ -15,7 +15,7 @@ console.log('🌐 API_BASE:', API_BASE);
 // GitHub Pages环境静默检测，不显示弹窗
 if (!isLocalEnv) {
     console.log('🌐 GitHub Pages环境已启用');
-    console.log('🚀 使用自有Vercel API代理处理飞书API调用');
+    console.log('🚀 飞书API通过AllOrigins代理调用（稳定可靠）');
 }
 
 // API配置 - 用户配置信息
@@ -42,11 +42,11 @@ let API_CONFIG = {
     },
     // 飞书配置
     FEISHU: {
-        appId: '',
-        appSecret: '',
+        appId: 'cli_a75792f537d8d00e',
+        appSecret: 'bKyvgmJ21Z0roULKxcIyogTJvIYnmdhN',
         docToken: '', // 可选，用于更新现有文档
-        appToken: '', // 多维表格App Token
-        tableId: ''   // 多维表格Table ID
+        appToken: 'OguRbGGVrafyHysXtVncI7sSnFg', // 多维表格App Token
+        tableId: 'tbl9HcpOE9gJ0fDp'   // 多维表格Table ID
     },
     // 接口模式选择：'workflow' 或 'chat'
     MODE: 'chat' // 固定使用对话接口模式
@@ -1962,10 +1962,10 @@ async function syncToFeishuTable(accessToken) {
         recordData
     });
     
-    // 调用飞书多维表格API - 使用自有代理
-    const apiUrl = (isLocalEnv 
+    // 调用飞书多维表格API - 本地用代理，线上用AllOrigins代理
+    const apiUrl = isLocalEnv 
         ? `http://localhost:3002/feishu-proxy/bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`
-        : `/api/feishu-proxy?path=${encodeURIComponent(`bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`)}`);
+        : 'https://api.allorigins.win/raw?url=' + encodeURIComponent(`https://open.feishu.cn/open-apis/bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`);
     const requestOptions = {
         method: 'POST',
         headers: {
@@ -2110,10 +2110,10 @@ async function getFeishuAccessToken() {
         throw new Error('请先配置飞书App ID和App Secret');
     }
     
-    // 使用自有代理避免CORS问题
-    const apiUrl = (isLocalEnv 
+    // 本地用代理避免CORS，线上用AllOrigins代理
+    const apiUrl = isLocalEnv 
         ? 'http://localhost:3002/feishu-proxy/auth/v3/tenant_access_token/internal'
-        : '/api/feishu-proxy?path=' + encodeURIComponent('auth/v3/tenant_access_token/internal'));
+        : 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal');
     const requestBody = {
         app_id: API_CONFIG.FEISHU.appId,
         app_secret: API_CONFIG.FEISHU.appSecret
@@ -2175,10 +2175,10 @@ async function getFeishuAccessToken() {
 
 // 创建飞书文档
 async function createFeishuDoc(accessToken, title, content) {
-    // 飞书API通过自有代理调用创建文档
-    const apiUrl = (isLocalEnv
+    // 飞书API调用创建文档 - 本地用代理，线上用AllOrigins代理
+    const apiUrl = isLocalEnv
         ? 'http://localhost:3002/feishu-proxy/docx/v1/documents'
-        : '/api/feishu-proxy?path=' + encodeURIComponent('docx/v1/documents'));
+        : 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://open.feishu.cn/open-apis/docx/v1/documents');
     const requestOptions = {
         method: 'POST',
         headers: {
@@ -2225,10 +2225,10 @@ async function updateFeishuDocContent(accessToken, docToken, content) {
     // 转换markdown为飞书文档格式
     const blocks = convertMarkdownToFeishuBlocks(content);
     
-    // 飞书API通过自有代理调用更新文档
-    const apiUrl = (isLocalEnv
+    // 飞书API调用更新文档 - 本地用代理，线上用AllOrigins代理
+    const apiUrl = isLocalEnv
         ? `http://localhost:3002/feishu-proxy/docx/v1/documents/${docToken}/blocks/batch_update`
-        : '/api/feishu-proxy?path=' + encodeURIComponent(`docx/v1/documents/${docToken}/blocks/batch_update`));
+        : 'https://api.allorigins.win/raw?url=' + encodeURIComponent(`https://open.feishu.cn/open-apis/docx/v1/documents/${docToken}/blocks/batch_update`);
     const requestOptions = {
         method: 'PATCH',
         headers: {
