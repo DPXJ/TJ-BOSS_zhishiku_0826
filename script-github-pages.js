@@ -1963,7 +1963,7 @@ async function syncToFeishuTable(accessToken) {
     });
     
     // 调用飞书多维表格API - 使用Vercel代理
-    const apiUrl = `/api/feishu-proxy?path=bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`;
+    const apiUrl = `/api/feishu?path=bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`;
     const requestOptions = {
         method: 'POST',
         headers: {
@@ -2109,7 +2109,7 @@ async function getFeishuAccessToken() {
     }
     
     // 线上环境使用Vercel代理来避免CORS问题
-    const apiUrl = '/api/feishu-proxy?path=auth/v3/tenant_access_token/internal';
+    const apiUrl = '/api/feishu?path=auth/v3/tenant_access_token/internal';
     const requestBody = {
         app_id: API_CONFIG.FEISHU.appId,
         app_secret: API_CONFIG.FEISHU.appSecret
@@ -2172,7 +2172,7 @@ async function getFeishuAccessToken() {
 // 创建飞书文档
 async function createFeishuDoc(accessToken, title, content) {
     // 飞书API通过Vercel代理调用创建文档
-    const apiUrl = '/api/feishu-proxy?path=docx/v1/documents';
+    const apiUrl = '/api/feishu?path=docx/v1/documents';
     const requestOptions = {
         method: 'POST',
         headers: {
@@ -2220,7 +2220,7 @@ async function updateFeishuDocContent(accessToken, docToken, content) {
     const blocks = convertMarkdownToFeishuBlocks(content);
     
     // 飞书API通过Vercel代理调用更新文档
-    const apiUrl = `/api/feishu-proxy?path=docx/v1/documents/${docToken}/blocks/batch_update`;
+    const apiUrl = `/api/feishu?path=docx/v1/documents/${docToken}/blocks/batch_update`;
     const requestOptions = {
         method: 'PATCH',
         headers: {
