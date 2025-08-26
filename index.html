@@ -326,7 +326,24 @@
         </div>
     </div>
 
-    <!-- 替换主脚本为GitHub Pages专用版本，支持Vercel代理API -->
-    <script src="script.js?v=2025011501"></script>
+    <!-- 根据环境自动选择脚本版本 -->
+    <script>
+        // 检测当前运行环境
+        const isLocalEnvironment = window.location.hostname === 'localhost' || 
+                                  window.location.hostname === '127.0.0.1';
+        
+        // 根据环境加载对应的脚本
+        const scriptSrc = isLocalEnvironment ? 
+            'script.js?v=2025011501' : 
+            'script-github-pages.js?v=2025011501';
+            
+        console.log('🌐 当前环境:', isLocalEnvironment ? '本地开发' : 'GitHub Pages');
+        console.log('📄 加载脚本:', scriptSrc);
+        
+        // 动态加载脚本
+        const script = document.createElement('script');
+        script.src = scriptSrc;
+        document.head.appendChild(script);
+    </script>
 </body>
 </html> 

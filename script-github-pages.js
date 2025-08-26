@@ -1,19 +1,49 @@
 // GitHub Pages版本的FastGPT配置
 // 这个版本会调用本地运行的API服务器
 
-// Vercel云端API代理地址
-const VERCEL_API_BASE = 'https://boss-zhishiku-vercel.vercel.app';
-
-// 检查是否在本地环境
+// GitHub Pages环境配置
+// 由于GitHub Pages是静态托管，无法运行Node.js代理，所以使用直接调用方式
 const isLocalEnvironment = window.location.hostname === 'localhost' || 
                           window.location.hostname === '127.0.0.1';
 
-// 根据环境选择API基础地址
-// 本地环境使用代理服务器，其他环境直接调用FastGPT API
-const API_BASE = isLocalEnvironment ? 'http://localhost:3001/api/fastgpt' : '';
+// GitHub Pages环境直接调用FastGPT API（会有CORS问题，需要用户在控制台手动关闭安全模式）
+const API_BASE = isLocalEnvironment ? 'http://localhost:3001/api/fastgpt' : 'https://api.fastgpt.in/api';
 
-console.log('🌐 当前环境:', isLocalEnvironment ? '本地' : 'GitHub Pages/Actions');
+console.log('🌐 当前环境:', isLocalEnvironment ? '本地' : 'GitHub Pages');
 console.log('🌐 API_BASE:', API_BASE);
+
+// GitHub Pages环境的CORS解决方案提示
+if (!isLocalEnvironment) {
+    console.log('⚠️ GitHub Pages环境检测到！');
+    console.log('🔧 由于CORS限制，请按以下方式启用API功能：');
+    console.log('1. 按F12打开开发者工具');
+    console.log('2. 在控制台执行：enableGitHubPagesMode()');
+    console.log('3. 或者下载并在本地运行项目以获得完整功能');
+    
+    // 添加页面提示
+    setTimeout(() => {
+        const alertDiv = document.createElement('div');
+        alertDiv.innerHTML = `
+            <div style="position: fixed; top: 10px; right: 10px; z-index: 9999; 
+                        background: #ff6b6b; color: white; padding: 15px; border-radius: 8px; 
+                        max-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                <h4 style="margin: 0 0 10px 0;">🌐 GitHub Pages模式</h4>
+                <p style="margin: 0; font-size: 14px;">
+                    由于CORS限制，AI功能需要特殊设置。<br>
+                    请按F12打开控制台执行：<br>
+                    <code style="background: rgba(255,255,255,0.2); padding: 2px 4px; border-radius: 3px;">
+                        enableGitHubPagesMode()
+                    </code>
+                </p>
+                <button onclick="this.parentElement.remove()" 
+                        style="position: absolute; top: 5px; right: 8px; 
+                               background: none; border: none; color: white; 
+                               font-size: 16px; cursor: pointer;">×</button>
+            </div>
+        `;
+        document.body.appendChild(alertDiv);
+    }, 2000);
+}
 
 // API配置 - 用户配置信息
 let API_CONFIG = {
@@ -27,13 +57,13 @@ let API_CONFIG = {
     },
     // FastGPT配置 - 风格分析
     FASTGPT_STYLE: {
-        baseUrl: isLocalEnvironment ? 'http://localhost:3001/api/fastgpt' : 'https://api.fastgpt.in/api', // 根据环境选择API地址
+        baseUrl: API_BASE, // 使用统一的API基础地址
         apiKey: 'fastgpt-uWWVnoPpJIc57h6BiLumhzeyk89gfyPmQCCYn8R214C71i6tL6Pa5Gsov7NnIYH', // 写死的风格分析密钥
         workflowId: '685f87df49b71f158b57ae61' // 风格分析工作流ID（已修正）
     },
     // FastGPT配置 - 内容生成
     FASTGPT_CONTENT: {
-        baseUrl: isLocalEnvironment ? 'http://localhost:3001/api/fastgpt' : 'https://api.fastgpt.in/api', // 根据环境选择API地址
+        baseUrl: API_BASE, // 使用统一的API基础地址
         apiKey: 'fastgpt-p2WSK5LRZZM3tVzk0XRT4vERkQ2PYLXi6rFAZdHzzuB7mSicDLRBXiymej', // 写死的内容生成密钥
         workflowId: '685c9d7e6adb97a0858caaa6' // 内容创作工作流ID（已修正）
     },
@@ -1686,4 +1716,96 @@ function closePrivacyModal() {
     if (modal) {
         modal.style.display = 'none';
     }
-} 
+}
+
+// GitHub Pages模式启用函数
+function enableGitHubPagesMode() {
+    console.log('🚀 启用GitHub Pages模式...');
+    
+    // 显示CORS解决方案说明
+    const corsGuide = `
+🌐 GitHub Pages环境CORS解决方案：
+
+由于GitHub Pages是静态托管，无法运行Node.js代理服务器，
+所以直接调用FastGPT API会遇到CORS跨域限制。
+
+📋 解决方案：
+
+方案1: 使用浏览器扩展（推荐）
+1. 安装"CORS Unblock"或"Disable CORS"浏览器扩展
+2. 启用扩展后刷新页面
+3. 正常使用所有功能
+
+方案2: 启动Chrome无安全模式
+1. 关闭所有Chrome窗口
+2. 以无安全模式启动Chrome：
+   chrome.exe --disable-web-security --disable-features=VizDisplayCompositor --user-data-dir=temp
+3. 在无安全模式下访问页面
+
+方案3: 本地运行（最佳体验）
+1. 下载项目源代码
+2. 运行: npm install && npm start
+3. 访问: http://localhost:3001
+
+✅ 当前API配置已优化为GitHub Pages模式
+    `;
+    
+    console.log(corsGuide);
+    
+    // 显示用户友好的提示
+    alert(`🌐 GitHub Pages模式已启用！
+
+由于浏览器CORS限制，推荐以下解决方案：
+
+1. 【推荐】安装CORS浏览器扩展
+2. 或者下载源码本地运行
+3. 详细说明请查看浏览器控制台
+
+点击确定后将尝试直接调用API...`);
+    
+    // 测试API连接
+    testGitHubPagesAPI();
+}
+
+// 测试GitHub Pages API连接
+async function testGitHubPagesAPI() {
+    try {
+        console.log('🧪 测试GitHub Pages API连接...');
+        
+        const response = await fetch('https://api.fastgpt.in/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_CONFIG.FASTGPT_STYLE.apiKey}`
+            },
+            body: JSON.stringify({
+                chatId: 'github-pages-test',
+                stream: false,
+                messages: [{ role: 'user', content: '测试连接' }]
+            })
+        });
+        
+        if (response.ok) {
+            console.log('✅ GitHub Pages API连接成功！');
+            alert('✅ API连接测试成功！您可以正常使用所有功能了。');
+        } else {
+            throw new Error(`HTTP ${response.status}`);
+        }
+    } catch (error) {
+        console.error('❌ GitHub Pages API连接失败:', error);
+        console.log('💡 解决方案：请安装CORS浏览器扩展或本地运行项目');
+        
+        alert(`❌ API连接失败！
+
+错误信息：${error.message}
+
+解决方案：
+1. 安装"CORS Unblock"浏览器扩展
+2. 或下载源码本地运行获得最佳体验
+
+详情请查看控制台...`);
+    }
+}
+
+// 全局暴露函数供控制台调用
+window.enableGitHubPagesMode = enableGitHubPagesMode; 
