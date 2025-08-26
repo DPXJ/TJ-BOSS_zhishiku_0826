@@ -3,17 +3,17 @@
 
 // GitHub Pages环境配置
 // 由于GitHub Pages是静态托管，无法运行Node.js代理，所以使用直接调用方式
-const isLocalEnvironment = window.location.hostname === 'localhost' || 
-                          window.location.hostname === '127.0.0.1';
+const isLocalEnv = window.location.hostname === 'localhost' || 
+                   window.location.hostname === '127.0.0.1';
 
 // GitHub Pages环境直接调用FastGPT API（需要解决CORS问题）
-const API_BASE = isLocalEnvironment ? 'http://localhost:3001/api/fastgpt' : 'https://api.fastgpt.in/api';
+const API_BASE = isLocalEnv ? 'http://localhost:3001/api/fastgpt' : 'https://api.fastgpt.in/api';
 
-console.log('🌐 当前环境:', isLocalEnvironment ? '本地' : 'GitHub Pages');
+console.log('🌐 当前环境:', isLocalEnv ? '本地' : 'GitHub Pages');
 console.log('🌐 API_BASE:', API_BASE);
 
 // GitHub Pages环境CORS解决方案提示
-if (!isLocalEnvironment) {
+if (!isLocalEnv) {
     console.log('⚠️ GitHub Pages环境检测到！');
     console.log('🔧 由于CORS限制，需要启用浏览器扩展或调整设置：');
     console.log('1. 推荐：安装CORS浏览器扩展（如"CORS Unblock"）');
@@ -1204,7 +1204,7 @@ function showEnvironmentInfo() {
         position: fixed;
         top: 10px;
         right: 10px;
-        background: ${isLocalEnvironment ? '#4CAF50' : '#FF9800'};
+        background: ${isLocalEnv ? '#4CAF50' : '#FF9800'};
         color: white;
         padding: 10px;
         border-radius: 5px;
@@ -1213,7 +1213,7 @@ function showEnvironmentInfo() {
         max-width: 300px;
     `;
     
-    if (isLocalEnvironment) {
+    if (isLocalEnv) {
         infoDiv.innerHTML = `
             ✅ 本地环境<br>
             🔗 API: 相对路径<br>
@@ -1447,12 +1447,12 @@ function saveConfigDynamic() {
     } catch(e) {
         // API密钥和baseUrl保持写死状态
         API_CONFIG.FASTGPT_STYLE = { 
-            baseUrl: isLocalEnvironment ? 'http://localhost:3001/api/fastgpt' : 'https://api.fastgpt.in/api', 
+            baseUrl: isLocalEnv ? 'http://localhost:3001/api/fastgpt' : 'https://api.fastgpt.in/api', 
             apiKey: 'fastgpt-uWWVnoPpJIc57h6BiLumhzeyk89gfyPmQCCYn8R214C71i6tL6Pa5Gsov7NnIYH', 
             workflowId: '685f87df49b71f158b57ae61' 
         };
         API_CONFIG.FASTGPT_CONTENT = { 
-            baseUrl: isLocalEnvironment ? 'http://localhost:3001/api/fastgpt' : 'https://api.fastgpt.in/api', 
+            baseUrl: isLocalEnv ? 'http://localhost:3001/api/fastgpt' : 'https://api.fastgpt.in/api', 
             apiKey: 'fastgpt-p2WSK5LRZZM3tVzk0XRT4vERkQ2PYLXi6rFAZdHzzuB7mSicDLRBXiymej', 
             workflowId: '685c9d7e6adb97a0858caaa6' 
         };
