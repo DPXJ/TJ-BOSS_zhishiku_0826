@@ -1009,68 +1009,35 @@ function showFastGPTDebug(debugData) {
 
 // 显示风格分析结果
 function showStyleAnalysis(content) {
-    const styleOutput = document.getElementById('style-output');
-    if (!styleOutput) {
-        console.error('未找到style-output元素');
-        return;
+    console.log('🎯 showStyleAnalysis被调用，传入的content:', content);
+    console.log('🎯 content的类型:', typeof content);
+    
+    const styleTextarea = document.getElementById('style-output');
+    console.log('🎯 找到的textarea元素:', styleTextarea);
+    
+    if (styleTextarea) {
+        // 直接更新风格内容显示
+        const finalContent = content || '正式严谨，条理清晰，用词准确，逻辑性强';
+        console.log('🎯 最终要设置的内容:', finalContent);
+        
+        styleTextarea.value = finalContent;
+        console.log('🎯 设置后textarea的值:', styleTextarea.value);
+        
+        // 更新全局状态
+        appState.styleOutput = styleTextarea.value;
+        
+        // 添加更新动画效果
+        styleTextarea.style.borderColor = '#28a745';
+        styleTextarea.style.background = '#f8fff9';
+        setTimeout(() => {
+            styleTextarea.style.borderColor = '#007bff';
+            styleTextarea.style.background = '#f8f9fa';
+        }, 1000);
+        
+        console.log('✅ 风格分析结果已更新:', finalContent);
+    } else {
+        console.error('❌ 未找到style-output元素！');
     }
-    
-    // 创建容器
-    const container = document.createElement('div');
-    container.className = 'style-analysis-container';
-    
-    // 顶部标题和按钮组
-    const header = document.createElement('div');
-    header.className = 'style-analysis-header';
-    header.style.display = 'flex';
-    header.style.justifyContent = 'space-between';
-    header.style.alignItems = 'center';
-    
-    // 标题
-    const title = document.createElement('div');
-    title.style.fontWeight = 'bold';
-    title.style.fontSize = '1.15rem';
-    title.textContent = '内容风格';
-    
-    // 按钮组
-    const actionsDiv = document.createElement('div');
-    actionsDiv.style.display = 'flex';
-    actionsDiv.style.gap = '10px';
-    actionsDiv.style.alignItems = 'center';
-    
-    // 复制按钮
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'action-btn';
-    copyBtn.innerHTML = '<i class="fas fa-copy"></i> 复制';
-    copyBtn.onclick = function() {
-        navigator.clipboard.writeText(content).then(() => {
-            showToast('已复制到剪贴板', 'success');
-        });
-    };
-    actionsDiv.appendChild(copyBtn);
-    
-    // 组装header
-    header.appendChild(title);
-    header.appendChild(actionsDiv);
-    
-    // 内容区
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'style-analysis-content';
-    contentDiv.style.position = 'relative';
-    
-    let renderedContent = marked.parse(content);
-    contentDiv.innerHTML = `<div class="markdown-content" id="style-markdown-content">${renderedContent}</div>`;
-    
-    // 组装
-    container.appendChild(header);
-    container.appendChild(contentDiv);
-    styleOutput.innerHTML = '';
-    styleOutput.appendChild(container);
-    
-    // 代码高亮
-    document.querySelectorAll('pre code').forEach((block) => {
-        hljs.highlightBlock(block);
-    });
 }
 
 // 配置相关函数
