@@ -2716,6 +2716,13 @@ function downloadGeneratedContent() {
 
 // 同步到飞书多维表格
 async function syncToFeishuTable(accessToken) {
+    console.log('🚀 开始同步到飞书多维表格');
+    console.log('🔑 访问令牌长度:', accessToken ? accessToken.length : 0);
+    console.log('📋 表格配置:', {
+        appToken: API_CONFIG.FEISHU.appToken,
+        tableId: API_CONFIG.FEISHU.tableId
+    });
+    
     const topicEl = document.getElementById('topic');
     const wordCountEl = document.getElementById('word-count');
     const notesEl = document.getElementById('notes');
@@ -2727,18 +2734,29 @@ async function syncToFeishuTable(accessToken) {
     const notes = notesEl ? notesEl.value.trim() || '' : '';
     const currentTime = new Date().toLocaleString('zh-CN');
     
-    // 构建表格记录
+    console.log('📊 待同步数据:', {
+        title,
+        contentLength: content.length,
+        wordCount,
+        notes
+    });
+    
+    // 构建表格记录 - 按照飞书API文档格式
     const recordData = {
         "fields": {
             "标题": title,
             "内容": content,
-            "字数": wordCount,
-            "创建时间": currentTime,
-            "风格类型": "正式严谨", // 可以根据实际风格分析结果设置
-            "补充说明": notes,
-            "状态": "草稿"
+            "字数": wordCount
+            // 注意：创建时间字段如果是"创建时间"类型会自动填充，不需要手动设置
+            // 注意：只包含在表格中实际存在的字段
         }
     };
+    
+    // 如果表格中有其他字段，可以添加（但要确保字段名称完全匹配）
+    // 只添加在您的表格中确实存在的字段
+    if (notes) {
+        recordData.fields["补充说明"] = notes;
+    }
     
     console.log('📊 准备同步到多维表格:', {
         appToken: API_CONFIG.FEISHU.appToken,
@@ -2763,8 +2781,29 @@ async function syncToFeishuTable(accessToken) {
     
     if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ 多维表格API错误响应:', { status: response.status, statusText: response.statusText, errorText });
-        throw new Error(`多维表格同步失败: ${response.status} - ${response.statusText}\n${errorText}`);
+        console.error('❌ 多维表格API错误响应:', { 
+            status: response.status, 
+            statusText: response.statusText, 
+            errorText,
+            apiUrl,
+            requestBody: recordData
+        });
+        
+        // 解析错误信息
+        let errorMessage = `多维表格同步失败 (${response.status})`;
+        try {
+            const errorJson = JSON.parse(errorText);
+            if (errorJson.msg) {
+                errorMessage += `: ${errorJson.msg}`;
+            }
+            if (errorJson.code) {
+                errorMessage += ` (错误代码: ${errorJson.code})`;
+            }
+        } catch (e) {
+            errorMessage += `: ${errorText}`;
+        }
+        
+        throw new Error(errorMessage);
     }
     
     const result = await response.json();
