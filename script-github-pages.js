@@ -1931,6 +1931,39 @@ function downloadGeneratedContent() {
     showToast(`文件已下载：${filename}`, 'success');
 }
 
+// 获取飞书多维表格字段信息
+async function getFeishuTableFields(accessToken) {
+    console.log('🔍 获取多维表格字段信息');
+    
+    // 根据环境选择API地址
+    let apiUrl;
+    const path = `bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/fields`;
+    if (isLocalEnv) {
+        apiUrl = `http://localhost:3002/feishu-proxy/${path}`;
+    } else if (isVercelEnv) {
+        apiUrl = `/api/feishu-proxy?path=${encodeURIComponent(path)}`;
+    } else {
+        apiUrl = `${CORS_FALLBACK}/${path}`;
+    }
+    
+    const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+        }
+    });
+    
+    if (response.ok) {
+        const result = await response.json();
+        console.log('📋 表格字段信息:', result);
+        return result.data?.items || [];
+    } else {
+        console.warn('⚠️ 无法获取表格字段信息，使用默认字段');
+        return [];
+    }
+}
+
 // 同步到飞书多维表格
 async function syncToFeishuTable(accessToken) {
     console.log('🚀 开始同步到飞书多维表格');
@@ -1939,6 +1972,10 @@ async function syncToFeishuTable(accessToken) {
         appToken: API_CONFIG.FEISHU.appToken,
         tableId: API_CONFIG.FEISHU.tableId
     });
+    
+    // 首先获取表格字段信息
+    const fields = await getFeishuTableFields(accessToken);
+    console.log('📋 表格字段列表:', fields.map(f => ({ name: f.field_name, type: f.type })));
     
     const topicEl = document.getElementById('topic');
     const wordCountEl = document.getElementById('word-count');
@@ -1958,25 +1995,73 @@ async function syncToFeishuTable(accessToken) {
         notes
     });
     
-    // 构建表格记录 - 使用多种可能的字段名格式
-    const recordData = {
-        "fields": {
-            // 尝试多种字段名格式，提高兼容性
-            "标题": title,
-            "title": title,
-            "内容": content.substring(0, 5000), // 限制内容长度
-            "content": content.substring(0, 5000),
-            "字数": wordCount,
-            "word_count": wordCount,
-            "创建时间": currentTime,
-            "created_time": new Date().toISOString()
-        }
+    // 根据实际字段名动态构建记录数据
+    const recordData = { "fields": {} };
+    
+    // 字段映射：数据 -> 可能的字段名
+    const fieldMapping = {
+        title: ['title', '标题', 'Title', '主题', 'name', 'Name'],
+        content: ['content', '内容', 'Content', '正文', 'text', 'Text'],
+        wordCount: ['word_count', '字数', 'WordCount', '字符数', 'count', 'Count'],
+        notes: ['notes', '备注', 'Notes', '说明', '补充说明', 'remark', 'Remark']
     };
     
-    // 如果有备注，添加到记录中
+    // 获取实际字段名列表
+    const existingFieldNames = fields.map(f => f.field_name);
+    console.log('📋 表格中存在的字段:', existingFieldNames);
+    
+    // 动态匹配字段名并填充数据
+    if (title) {
+        const titleField = fieldMapping.title.find(name => existingFieldNames.includes(name));
+        if (titleField) {
+            recordData.fields[titleField] = title;
+            console.log(`✅ 标题字段匹配: ${titleField} = ${title}`);
+        } else {
+            // 如果没有匹配的字段，使用第一个文本字段
+            const firstTextField = fields.find(f => f.type === 1); // 1是文本字段类型
+            if (firstTextField) {
+                recordData.fields[firstTextField.field_name] = title;
+                console.log(`📝 使用第一个文本字段作为标题: ${firstTextField.field_name} = ${title}`);
+            }
+        }
+    }
+    
+    if (content) {
+        const contentField = fieldMapping.content.find(name => existingFieldNames.includes(name));
+        if (contentField) {
+            recordData.fields[contentField] = content.substring(0, 5000);
+            console.log(`✅ 内容字段匹配: ${contentField}`);
+        } else {
+            // 使用多行文本字段
+            const multiTextField = fields.find(f => f.type === 2); // 2是多行文本类型
+            if (multiTextField) {
+                recordData.fields[multiTextField.field_name] = content.substring(0, 5000);
+                console.log(`📝 使用多行文本字段: ${multiTextField.field_name}`);
+            }
+        }
+    }
+    
+    if (wordCount) {
+        const countField = fieldMapping.wordCount.find(name => existingFieldNames.includes(name));
+        if (countField) {
+            recordData.fields[countField] = wordCount;
+            console.log(`✅ 字数字段匹配: ${countField} = ${wordCount}`);
+        } else {
+            // 使用数字字段
+            const numberField = fields.find(f => f.type === 3); // 3是数字类型
+            if (numberField) {
+                recordData.fields[numberField.field_name] = wordCount;
+                console.log(`📝 使用数字字段: ${numberField.field_name} = ${wordCount}`);
+            }
+        }
+    }
+    
     if (notes) {
-        recordData.fields["补充说明"] = notes;
-        recordData.fields["notes"] = notes;
+        const notesField = fieldMapping.notes.find(name => existingFieldNames.includes(name));
+        if (notesField) {
+            recordData.fields[notesField] = notes;
+            console.log(`✅ 备注字段匹配: ${notesField} = ${notes}`);
+        }
     }
     
     console.log('📝 记录数据详情:', JSON.stringify(recordData, null, 2));
