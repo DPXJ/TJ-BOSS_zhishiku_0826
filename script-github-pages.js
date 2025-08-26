@@ -1,22 +1,38 @@
 // GitHub Pages版本的FastGPT配置
 // 这个版本会调用本地运行的API服务器
 
-// GitHub Pages环境配置
-// 由于GitHub Pages是静态托管，无法运行Node.js代理，所以使用直接调用方式
+// 环境配置
 const isLocalEnv = window.location.hostname === 'localhost' || 
                    window.location.hostname === '127.0.0.1';
 
-// GitHub Pages环境直接调用FastGPT API（需要解决CORS问题）
+// 检测是否在Vercel环境
+const isVercelEnv = window.location.hostname.includes('vercel.app') || 
+                    window.location.hostname.includes('vercel.com');
+
+// FastGPT API配置
 const API_BASE = isLocalEnv ? 'http://localhost:3001/api/fastgpt' : 'https://api.fastgpt.in/api';
+
+// Vercel API基础地址 - 如果你部署了Vercel，请替换为你的实际域名
+// 临时使用cors-anywhere作为备用方案
+const VERCEL_API_BASE = 'https://your-app-name.vercel.app';
+const CORS_FALLBACK = 'https://cors-anywhere.herokuapp.com/https://open.feishu.cn/open-apis';
 
 console.log('🌐 当前环境:', isLocalEnv ? '本地' : 'GitHub Pages');
 console.log('🌐 API_BASE:', API_BASE);
 
-// GitHub Pages环境静默检测，不显示弹窗
-if (!isLocalEnv) {
-    console.log('🌐 GitHub Pages环境已启用');
-    console.log('🚀 飞书API通过Vercel无服务器代理调用');
-    console.log('✅ 无需额外激活，开箱即用');
+// 环境检测和配置
+if (isLocalEnv) {
+    console.log('🌐 本地开发环境');
+    console.log('🚀 使用本地代理服务器');
+} else if (isVercelEnv) {
+    console.log('🌐 Vercel生产环境');
+    console.log('🚀 使用Vercel无服务器函数');
+    console.log('✅ 开箱即用');
+} else {
+    console.log('🌐 GitHub Pages环境');
+    console.log('🚀 使用CORS代理备用方案');
+    console.log('💡 首次使用需访问 https://cors-anywhere.herokuapp.com/corsdemo 激活');
+    console.log('🔧 建议部署到Vercel获得更好体验');
 }
 
 // API配置 - 用户配置信息
@@ -1971,10 +1987,19 @@ async function syncToFeishuTable(accessToken) {
         recordData
     });
     
-    // 调用飞书多维表格API - 本地用代理，线上用Vercel代理
-    const apiUrl = isLocalEnv 
-        ? `http://localhost:3002/feishu-proxy/bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`
-        : `/api/feishu-proxy?path=${encodeURIComponent(`bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`)}`;
+    // 根据环境选择API地址
+    let apiUrl;
+    const path = `bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`;
+    if (isLocalEnv) {
+        // 本地环境：使用本地代理
+        apiUrl = `http://localhost:3002/feishu-proxy/${path}`;
+    } else if (isVercelEnv) {
+        // Vercel环境：使用相对路径
+        apiUrl = `/api/feishu-proxy?path=${encodeURIComponent(path)}`;
+    } else {
+        // GitHub Pages环境：使用CORS备用方案
+        apiUrl = `${CORS_FALLBACK}/${path}`;
+    }
     const requestOptions = {
         method: 'POST',
         headers: {
@@ -2126,10 +2151,18 @@ async function getFeishuAccessToken() {
         throw new Error('请先配置飞书App ID和App Secret');
     }
     
-    // 本地用代理避免CORS，线上用Vercel代理
-    const apiUrl = isLocalEnv 
-        ? 'http://localhost:3002/feishu-proxy/auth/v3/tenant_access_token/internal'
-        : '/api/feishu-proxy?path=' + encodeURIComponent('auth/v3/tenant_access_token/internal');
+    // 根据环境选择API地址
+    let apiUrl;
+    if (isLocalEnv) {
+        // 本地环境：使用本地代理
+        apiUrl = 'http://localhost:3002/feishu-proxy/auth/v3/tenant_access_token/internal';
+    } else if (isVercelEnv) {
+        // Vercel环境：使用相对路径
+        apiUrl = '/api/feishu-proxy?path=' + encodeURIComponent('auth/v3/tenant_access_token/internal');
+    } else {
+        // GitHub Pages环境：使用CORS备用方案
+        apiUrl = CORS_FALLBACK + '/auth/v3/tenant_access_token/internal';
+    }
     const requestBody = {
         app_id: API_CONFIG.FEISHU.appId,
         app_secret: API_CONFIG.FEISHU.appSecret
