@@ -2220,18 +2220,77 @@ function updateWordCount(content) {
 
 // 加载飞书配置
 function loadFeishuConfig() {
-    const feishuAppIdEl = document.getElementById('feishu-app-id');
-    const feishuAppSecretEl = document.getElementById('feishu-app-secret');
-    const feishuDocTokenEl = document.getElementById('feishu-doc-token');
-    
-    if (feishuAppIdEl) feishuAppIdEl.value = API_CONFIG.FEISHU.appId;
-    if (feishuAppSecretEl) feishuAppSecretEl.value = API_CONFIG.FEISHU.appSecret;
-    if (feishuDocTokenEl) feishuDocTokenEl.value = API_CONFIG.FEISHU.docToken;
-}
+    try {
+        console.log('🔄 开始加载飞书配置...');
+        
+        // 从本地存储加载配置
+        const savedConfig = localStorage.getItem('boss_kb_config');
+        if (savedConfig) {
+            const config = JSON.parse(savedConfig);
+            if (config.FEISHU) {
+                API_CONFIG.FEISHU = { ...API_CONFIG.FEISHU, ...config.FEISHU };
+                console.log('📋 从本地存储加载的飞书配置:', {
+                    appId: config.FEISHU.appId ? `${config.FEISHU.appId.substring(0, 8)}...` : '未设置',
+                    appSecret: config.FEISHU.appSecret ? '***已设置***' : '未设置',
+                    docToken: config.FEISHU.docToken ? `${config.FEISHU.docToken.substring(0, 8)}...` : '未设置',
+                    appToken: config.FEISHU.appToken ? `${config.FEISHU.appToken.substring(0, 8)}...` : '未设置',
+                    tableId: config.FEISHU.tableId ? `${config.FEISHU.tableId.substring(0, 8)}...` : '未设置'
+                });
+            } else {
+                console.log('📋 本地存储中没有飞书配置');
+            }
+        } else {
+            console.log('📋 本地存储中没有配置数据');
+        }
 
-// 保存飞书配置
-function saveFeishuConfig() {
-    saveConfigToStorage();
+        // 检查并填充到界面
+        const elements = {
+            feishuAppIdEl: document.getElementById('feishu-app-id'),
+            feishuAppSecretEl: document.getElementById('feishu-app-secret'),
+            feishuDocTokenEl: document.getElementById('feishu-doc-token'),
+            feishuAppTokenEl: document.getElementById('feishu-app-token'),
+            feishuTableIdEl: document.getElementById('feishu-table-id')
+        };
+        
+        console.log('🔍 检查界面元素是否存在:', {
+            'feishu-app-id': !!elements.feishuAppIdEl,
+            'feishu-app-secret': !!elements.feishuAppSecretEl,
+            'feishu-doc-token': !!elements.feishuDocTokenEl,
+            'feishu-app-token': !!elements.feishuAppTokenEl,
+            'feishu-table-id': !!elements.feishuTableIdEl
+        });
+        
+        if (elements.feishuAppIdEl) {
+            elements.feishuAppIdEl.value = API_CONFIG.FEISHU.appId || '';
+            console.log('✅ App ID已填充到界面');
+        }
+        if (elements.feishuAppSecretEl) {
+            elements.feishuAppSecretEl.value = API_CONFIG.FEISHU.appSecret || '';
+            console.log('✅ App Secret已填充到界面');
+        }
+        if (elements.feishuDocTokenEl) {
+            elements.feishuDocTokenEl.value = API_CONFIG.FEISHU.docToken || '';
+            console.log('✅ Doc Token已填充到界面');
+        }
+        if (elements.feishuAppTokenEl) {
+            elements.feishuAppTokenEl.value = API_CONFIG.FEISHU.appToken || '';
+            console.log('✅ App Token已填充到界面');
+        }
+        if (elements.feishuTableIdEl) {
+            elements.feishuTableIdEl.value = API_CONFIG.FEISHU.tableId || '';
+            console.log('✅ Table ID已填充到界面');
+        }
+        
+        console.log('✅ 飞书配置加载完成:', {
+            appId: API_CONFIG.FEISHU.appId ? `${API_CONFIG.FEISHU.appId.substring(0, 8)}...` : '未设置',
+            appSecret: API_CONFIG.FEISHU.appSecret ? '***已设置***' : '未设置',
+            docToken: API_CONFIG.FEISHU.docToken ? `${API_CONFIG.FEISHU.docToken.substring(0, 8)}...` : '未设置',
+            appToken: API_CONFIG.FEISHU.appToken ? `${API_CONFIG.FEISHU.appToken.substring(0, 8)}...` : '未设置',
+            tableId: API_CONFIG.FEISHU.tableId ? `${API_CONFIG.FEISHU.tableId.substring(0, 8)}...` : '未设置'
+        });
+    } catch (error) {
+        console.error('❌ 飞书配置加载失败:', error);
+    }
 }
 
 // 重写配置保存函数以包含飞书配置
@@ -2241,10 +2300,14 @@ function saveConfigToStorage() {
         const feishuAppIdEl = document.getElementById('feishu-app-id');
         const feishuAppSecretEl = document.getElementById('feishu-app-secret');
         const feishuDocTokenEl = document.getElementById('feishu-doc-token');
+        const feishuAppTokenEl = document.getElementById('feishu-app-token');
+        const feishuTableIdEl = document.getElementById('feishu-table-id');
         
         if (feishuAppIdEl) API_CONFIG.FEISHU.appId = feishuAppIdEl.value.trim();
         if (feishuAppSecretEl) API_CONFIG.FEISHU.appSecret = feishuAppSecretEl.value.trim();
         if (feishuDocTokenEl) API_CONFIG.FEISHU.docToken = feishuDocTokenEl.value.trim();
+        if (feishuAppTokenEl) API_CONFIG.FEISHU.appToken = feishuAppTokenEl.value.trim();
+        if (feishuTableIdEl) API_CONFIG.FEISHU.tableId = feishuTableIdEl.value.trim();
         
         // 保存到本地存储
         localStorage.setItem('boss_kb_config', JSON.stringify(API_CONFIG));
@@ -2257,7 +2320,7 @@ function saveConfigToStorage() {
 // 在页面加载时加载飞书配置
 document.addEventListener('DOMContentLoaded', function() {
     // 延迟加载飞书配置，确保元素已存在
-    setTimeout(loadFeishuConfig, 1000);
+    setTimeout(loadFeishuConfig, 100); // 减少延迟时间
 });
 
 // ==================== 飞书配置管理功能 ====================
@@ -2298,7 +2361,7 @@ function saveFeishuConfig() {
         }
 
         // 保存到本地存储
-        saveConfigToStorage();
+        localStorage.setItem('boss_kb_config', JSON.stringify(API_CONFIG));
         
         // 保存成功反馈
         const saveBtn = event.target;
@@ -2317,9 +2380,11 @@ function saveFeishuConfig() {
         
         showToast('飞书配置已保存', 'success');
         console.log('✅ 飞书配置已保存:', {
-            appId: API_CONFIG.FEISHU.appId,
+            appId: API_CONFIG.FEISHU.appId ? `${API_CONFIG.FEISHU.appId.substring(0, 8)}...` : '未设置',
             appSecret: API_CONFIG.FEISHU.appSecret ? '***已设置***' : '未设置',
-            docToken: API_CONFIG.FEISHU.docToken || '未设置'
+            docToken: API_CONFIG.FEISHU.docToken ? `${API_CONFIG.FEISHU.docToken.substring(0, 8)}...` : '未设置',
+            appToken: API_CONFIG.FEISHU.appToken ? `${API_CONFIG.FEISHU.appToken.substring(0, 8)}...` : '未设置',
+            tableId: API_CONFIG.FEISHU.tableId ? `${API_CONFIG.FEISHU.tableId.substring(0, 8)}...` : '未设置'
         });
         
     } catch (error) {
