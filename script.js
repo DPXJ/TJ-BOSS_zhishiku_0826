@@ -253,18 +253,28 @@ async function callContentGenerationWorkflow(styleOutput, contentLength, topic, 
         throw new Error('内容生成工作流ID未配置，请先配置workflowId');
     }
 
+    // 构建详细的prompt
+    const prompt = `请根据以下要求生成内容：
+
+主题：${topic}
+字数要求：${contentLength}字
+风格要求：${styleType}
+补充说明：${remark || '无'}
+
+请严格按照提供的风格分析报告进行内容创作，确保生成的内容符合指定的字数要求和风格特点。`;
+
     // 构建请求体
     const requestBody = {
         chatId: Date.now().toString(),
         stream: false,
         detail: true,
         workflowId: API_CONFIG.FASTGPT_CONTENT.workflowId,
-        messages: [{ role: 'user', content: '' }],
+        messages: [{ role: 'user', content: prompt }],
         variables: {
             style_output: styleOutput,
             content_length: contentLength,
             topic: topic,
-            style_type: styleType, // 使用正确的变量名
+            style_type: styleType,
             remark: remark || ''
         }
     };
@@ -518,10 +528,20 @@ async function analyzeStyleWithChatRaw(article_input, url_input) {
 
 // 新增：使用对话接口进行内容生成
 async function generateContentWithChat(styleOutput, contentLength, topic, styleType, remark) {
+    // 构建详细的prompt
+    const prompt = `请根据以下要求生成内容：
+
+主题：${topic}
+字数要求：${contentLength}字
+风格要求：${styleType}
+补充说明：${remark || '无'}
+
+请严格按照提供的风格分析报告进行内容创作，确保生成的内容符合指定的字数要求和风格特点。`;
+
     const messages = [
         {
             role: "user",
-            content: '请根据工作流变量生成内容' // 提供非空内容，避免AI_input_is_empty错误
+            content: prompt
         }
     ];
     
@@ -1233,8 +1253,22 @@ async function generateContent() {
     
     // 从textarea获取风格内容
     const styleTextarea = document.getElementById('style-output');
-    const contentType = styleTextarea ? styleTextarea.value.trim() : (appState.styleOutput || '正式严谨，条理清晰，用词准确，逻辑性强');
+    const userStyleInput = styleTextarea ? styleTextarea.value.trim() : '';
+    
+    // style_output: 完整的风格分析报告（用于AI理解风格）
+    const styleOutput = appState.styleOutput || '正式严谨，条理清晰，用词准确，逻辑性强';
+    
+    // style_type: 用户输入的风格要求（简短描述）
+    const styleType = userStyleInput || '正式严谨，条理清晰，用词准确，逻辑性强';
+    
     const notes = notesInput.value.trim();
+    
+    console.log('📋 内容生成参数准备:');
+    console.log('- 主题:', topic);
+    console.log('- 字数:', contentLength);
+    console.log('- 风格分析报告长度:', styleOutput.length);
+    console.log('- 用户风格要求:', styleType);
+    console.log('- 补充说明:', notes);
     
     // 显示进度条和加载状态
     showProgressBar('content-generation', '生成专属内容', '正在准备生成内容...');
@@ -1267,11 +1301,11 @@ async function generateContent() {
             updateProgressStatus('正在调用AI生成接口...');
             
             generatedContent = await generateContentWithChat(
-                appState.styleOutput,
-                contentLength,
-                topic,
-                contentType,
-                notes
+                styleOutput,    // 完整的风格分析报告
+                contentLength,  // 字数要求
+                topic,          // 主题
+                styleType,      // 用户输入的风格要求
+                notes           // 补充说明
             );
         } else if (API_CONFIG.MODE === 'workflow') {
             // 使用工作流接口
@@ -1284,11 +1318,11 @@ async function generateContent() {
             updateProgressStatus('正在调用AI生成接口...');
             
             generatedContent = await callContentGenerationWorkflow(
-                appState.styleOutput,
-                contentLength,
-                topic,
-                contentType,
-                notes
+                styleOutput,    // 完整的风格分析报告
+                contentLength,  // 字数要求
+                topic,          // 主题
+                styleType,      // 用户输入的风格要求
+                notes           // 补充说明
             );
         } else {
             throw new Error('请设置正确的接口模式（chat 或 workflow）');
