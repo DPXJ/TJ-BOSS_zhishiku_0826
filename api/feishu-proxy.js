@@ -12,11 +12,12 @@ export default async function handler(req, res) {
         return;
     }
 
-    // 只允许POST方法
-    if (req.method !== 'POST') {
-        return res.status(405).json({ 
-            error: 'Method not allowed', 
-            allowedMethods: ['POST'] 
+    // 允许常见方法：GET/POST/PATCH/PUT/DELETE
+    const allowedMethods = ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'];
+    if (!allowedMethods.includes(req.method)) {
+        return res.status(405).json({
+            error: 'Method not allowed',
+            allowedMethods
         });
     }
 
@@ -62,12 +63,17 @@ export default async function handler(req, res) {
             body: req.body
         });
 
-        // 转发请求到飞书API
-        const response = await fetch(feishuUrl, {
-            method: 'POST',
-            headers: requestHeaders,
-            body: JSON.stringify(req.body)
-        });
+        // 组装请求选项，转发真实方法与请求体
+        const forwardOptions = {
+            method: req.method,
+            headers: requestHeaders
+        };
+        if (req.method !== 'GET' && req.method !== 'HEAD') {
+            forwardOptions.body = req.body ? JSON.stringify(req.body) : undefined;
+        }
+
+        // 转发到飞书API
+        const response = await fetch(feishuUrl, forwardOptions);
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -93,7 +99,7 @@ export default async function handler(req, res) {
         });
 
         // 返回飞书API的响应
-        res.status(200).json(responseData);
+        res.status(response.status).json(responseData);
         
     } catch (error) {
         console.error('❌ Feishu API Proxy Error:', error);
