@@ -44,7 +44,9 @@ let API_CONFIG = {
     FEISHU: {
         appId: '',
         appSecret: '',
-        docToken: '' // 可选，用于更新现有文档
+        docToken: '', // 可选，用于更新现有文档
+        appToken: '', // 多维表格App Token
+        tableId: ''   // 多维表格Table ID
     },
     // 接口模式选择：'workflow' 或 'chat'
     MODE: 'chat' // 固定使用对话接口模式
@@ -2174,10 +2176,16 @@ function saveFeishuConfig() {
             return;
         }
 
+        // 获取所有飞书配置字段
+        const feishuAppTokenEl = document.getElementById('feishu-app-token');
+        const feishuTableIdEl = document.getElementById('feishu-table-id');
+        
         // 更新API_CONFIG
         API_CONFIG.FEISHU.appId = feishuAppIdEl.value.trim();
         API_CONFIG.FEISHU.appSecret = feishuAppSecretEl.value.trim();
         API_CONFIG.FEISHU.docToken = feishuDocTokenEl ? feishuDocTokenEl.value.trim() : '';
+        API_CONFIG.FEISHU.appToken = feishuAppTokenEl ? feishuAppTokenEl.value.trim() : '';
+        API_CONFIG.FEISHU.tableId = feishuTableIdEl ? feishuTableIdEl.value.trim() : '';
 
         // 验证必填字段
         if (!API_CONFIG.FEISHU.appId) {

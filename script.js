@@ -24,7 +24,9 @@ let API_CONFIG = {
     FEISHU: {
         appId: '',
         appSecret: '',
-        docToken: '' // 可选，用于更新现有文档
+        docToken: '', // 可选，用于更新现有文档
+        appToken: '', // 多维表格App Token
+        tableId: ''   // 多维表格Table ID
     },
     // 接口模式选择：'workflow' 或 'chat'
     MODE: 'chat' // 固定使用对话接口模式
@@ -2942,10 +2944,16 @@ function saveFeishuConfig() {
             return;
         }
 
+        // 获取所有飞书配置字段
+        const feishuAppTokenEl = document.getElementById('feishu-app-token');
+        const feishuTableIdEl = document.getElementById('feishu-table-id');
+        
         // 更新API_CONFIG
         API_CONFIG.FEISHU.appId = feishuAppIdEl.value.trim();
         API_CONFIG.FEISHU.appSecret = feishuAppSecretEl.value.trim();
         API_CONFIG.FEISHU.docToken = feishuDocTokenEl ? feishuDocTokenEl.value.trim() : '';
+        API_CONFIG.FEISHU.appToken = feishuAppTokenEl ? feishuAppTokenEl.value.trim() : '';
+        API_CONFIG.FEISHU.tableId = feishuTableIdEl ? feishuTableIdEl.value.trim() : '';
 
         // 验证必填字段
         if (!API_CONFIG.FEISHU.appId) {
@@ -3006,10 +3014,14 @@ function loadFeishuConfig() {
         const feishuAppIdEl = document.getElementById('feishu-app-id');
         const feishuAppSecretEl = document.getElementById('feishu-app-secret');
         const feishuDocTokenEl = document.getElementById('feishu-doc-token');
+        const feishuAppTokenEl = document.getElementById('feishu-app-token');
+        const feishuTableIdEl = document.getElementById('feishu-table-id');
         
         if (feishuAppIdEl) feishuAppIdEl.value = API_CONFIG.FEISHU.appId || '';
         if (feishuAppSecretEl) feishuAppSecretEl.value = API_CONFIG.FEISHU.appSecret || '';
         if (feishuDocTokenEl) feishuDocTokenEl.value = API_CONFIG.FEISHU.docToken || '';
+        if (feishuAppTokenEl) feishuAppTokenEl.value = API_CONFIG.FEISHU.appToken || '';
+        if (feishuTableIdEl) feishuTableIdEl.value = API_CONFIG.FEISHU.tableId || '';
         
         console.log('✅ 飞书配置已加载:', {
             appId: API_CONFIG.FEISHU.appId || '未设置',
