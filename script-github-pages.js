@@ -1554,6 +1554,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     console.log('✅ 页面初始化完成');
     
+    // 延迟加载飞书配置，确保所有元素已存在
+    setTimeout(() => {
+        loadFeishuConfig();
+    }, 100);
+    
     // 示例链接复制功能
     const copyTestUrlLink = document.getElementById('copy-test-url-link');
     if (copyTestUrlLink) {
@@ -2380,11 +2385,7 @@ function saveConfigToStorage() {
     }
 }
 
-// 在页面加载时加载飞书配置
-document.addEventListener('DOMContentLoaded', function() {
-    // 延迟加载飞书配置，确保元素已存在
-    setTimeout(loadFeishuConfig, 100); // 减少延迟时间
-});
+// 飞书配置加载已合并到主要的页面初始化流程中
 
 // ==================== 飞书配置管理功能 ====================
 
