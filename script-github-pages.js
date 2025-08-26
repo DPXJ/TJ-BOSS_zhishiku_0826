@@ -15,7 +15,8 @@ console.log('🌐 API_BASE:', API_BASE);
 // GitHub Pages环境静默检测，不显示弹窗
 if (!isLocalEnv) {
     console.log('🌐 GitHub Pages环境已启用');
-    console.log('🚀 使用代理模式处理API调用');
+    console.log('🚀 使用CORS代理处理飞书API调用');
+    console.log('💡 如果遇到CORS错误，请访问: https://cors-anywhere.herokuapp.com/corsdemo 并点击"Request temporary access"');
 }
 
 // API配置 - 用户配置信息
@@ -1962,8 +1963,8 @@ async function syncToFeishuTable(accessToken) {
         recordData
     });
     
-    // 调用飞书多维表格API - 使用Vercel代理
-    const apiUrl = `/api/feishu?path=bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`;
+    // 调用飞书多维表格API - 使用CORS代理
+    const apiUrl = `https://cors-anywhere.herokuapp.com/https://open.feishu.cn/open-apis/bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`;
     const requestOptions = {
         method: 'POST',
         headers: {
@@ -2108,8 +2109,8 @@ async function getFeishuAccessToken() {
         throw new Error('请先配置飞书App ID和App Secret');
     }
     
-    // 线上环境使用Vercel代理来避免CORS问题
-    const apiUrl = '/api/feishu?path=auth/v3/tenant_access_token/internal';
+    // 线上环境使用CORS代理来避免CORS问题
+    const apiUrl = 'https://cors-anywhere.herokuapp.com/https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal';
     const requestBody = {
         app_id: API_CONFIG.FEISHU.appId,
         app_secret: API_CONFIG.FEISHU.appSecret
@@ -2171,8 +2172,8 @@ async function getFeishuAccessToken() {
 
 // 创建飞书文档
 async function createFeishuDoc(accessToken, title, content) {
-    // 飞书API通过Vercel代理调用创建文档
-    const apiUrl = '/api/feishu?path=docx/v1/documents';
+    // 飞书API通过CORS代理调用创建文档
+    const apiUrl = 'https://cors-anywhere.herokuapp.com/https://open.feishu.cn/open-apis/docx/v1/documents';
     const requestOptions = {
         method: 'POST',
         headers: {
@@ -2219,8 +2220,8 @@ async function updateFeishuDocContent(accessToken, docToken, content) {
     // 转换markdown为飞书文档格式
     const blocks = convertMarkdownToFeishuBlocks(content);
     
-    // 飞书API通过Vercel代理调用更新文档
-    const apiUrl = `/api/feishu?path=docx/v1/documents/${docToken}/blocks/batch_update`;
+    // 飞书API通过CORS代理调用更新文档
+    const apiUrl = `https://cors-anywhere.herokuapp.com/https://open.feishu.cn/open-apis/docx/v1/documents/${docToken}/blocks/batch_update`;
     const requestOptions = {
         method: 'PATCH',
         headers: {
