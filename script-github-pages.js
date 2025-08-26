@@ -15,7 +15,8 @@ console.log('🌐 API_BASE:', API_BASE);
 // GitHub Pages环境静默检测，不显示弹窗
 if (!isLocalEnv) {
     console.log('🌐 GitHub Pages环境已启用');
-    console.log('🚀 飞书API通过AllOrigins代理调用（稳定可靠）');
+    console.log('🚀 飞书API通过cors-anywhere代理调用');
+    console.log('💡 首次使用需访问 https://cors-anywhere.herokuapp.com/corsdemo 激活');
 }
 
 // API配置 - 用户配置信息
@@ -1037,6 +1038,7 @@ function loadConfigFromStorage() {
             const hardcodedContentKey = API_CONFIG.FASTGPT_CONTENT.apiKey;
             const hardcodedStyleBaseUrl = API_CONFIG.FASTGPT_STYLE.baseUrl;
             const hardcodedContentBaseUrl = API_CONFIG.FASTGPT_CONTENT.baseUrl;
+            const hardcodedFeishuConfig = { ...API_CONFIG.FEISHU }; // 保存写死的飞书配置
             
             API_CONFIG = { ...API_CONFIG, ...parsedConfig };
             
@@ -1045,6 +1047,7 @@ function loadConfigFromStorage() {
             API_CONFIG.FASTGPT_CONTENT.apiKey = hardcodedContentKey;
             API_CONFIG.FASTGPT_STYLE.baseUrl = hardcodedStyleBaseUrl;
             API_CONFIG.FASTGPT_CONTENT.baseUrl = hardcodedContentBaseUrl;
+            API_CONFIG.FEISHU = { ...hardcodedFeishuConfig }; // 强制恢复飞书默认配置
             
             // 再次强制修正
             console.log('[DEBUG] 合并后 API_CONFIG.FASTGPT_STYLE:', typeof API_CONFIG.FASTGPT_STYLE, API_CONFIG.FASTGPT_STYLE);
@@ -1962,10 +1965,10 @@ async function syncToFeishuTable(accessToken) {
         recordData
     });
     
-    // 调用飞书多维表格API - 本地用代理，线上用AllOrigins代理
+    // 调用飞书多维表格API - 本地用代理，线上用cors-anywhere
     const apiUrl = isLocalEnv 
         ? `http://localhost:3002/feishu-proxy/bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`
-        : 'https://api.allorigins.win/raw?url=' + encodeURIComponent(`https://open.feishu.cn/open-apis/bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`);
+        : `https://cors-anywhere.herokuapp.com/https://open.feishu.cn/open-apis/bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`;
     const requestOptions = {
         method: 'POST',
         headers: {
@@ -2110,10 +2113,10 @@ async function getFeishuAccessToken() {
         throw new Error('请先配置飞书App ID和App Secret');
     }
     
-    // 本地用代理避免CORS，线上用AllOrigins代理
+    // 本地用代理避免CORS，线上用cors-anywhere
     const apiUrl = isLocalEnv 
         ? 'http://localhost:3002/feishu-proxy/auth/v3/tenant_access_token/internal'
-        : 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal');
+        : 'https://cors-anywhere.herokuapp.com/https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal';
     const requestBody = {
         app_id: API_CONFIG.FEISHU.appId,
         app_secret: API_CONFIG.FEISHU.appSecret
@@ -2175,10 +2178,10 @@ async function getFeishuAccessToken() {
 
 // 创建飞书文档
 async function createFeishuDoc(accessToken, title, content) {
-    // 飞书API调用创建文档 - 本地用代理，线上用AllOrigins代理
+    // 飞书API调用创建文档 - 本地用代理，线上用cors-anywhere
     const apiUrl = isLocalEnv
         ? 'http://localhost:3002/feishu-proxy/docx/v1/documents'
-        : 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://open.feishu.cn/open-apis/docx/v1/documents');
+        : 'https://cors-anywhere.herokuapp.com/https://open.feishu.cn/open-apis/docx/v1/documents';
     const requestOptions = {
         method: 'POST',
         headers: {
@@ -2225,10 +2228,10 @@ async function updateFeishuDocContent(accessToken, docToken, content) {
     // 转换markdown为飞书文档格式
     const blocks = convertMarkdownToFeishuBlocks(content);
     
-    // 飞书API调用更新文档 - 本地用代理，线上用AllOrigins代理
+    // 飞书API调用更新文档 - 本地用代理，线上用cors-anywhere
     const apiUrl = isLocalEnv
         ? `http://localhost:3002/feishu-proxy/docx/v1/documents/${docToken}/blocks/batch_update`
-        : 'https://api.allorigins.win/raw?url=' + encodeURIComponent(`https://open.feishu.cn/open-apis/docx/v1/documents/${docToken}/blocks/batch_update`);
+        : `https://cors-anywhere.herokuapp.com/https://open.feishu.cn/open-apis/docx/v1/documents/${docToken}/blocks/batch_update`;
     const requestOptions = {
         method: 'PATCH',
         headers: {
@@ -2319,7 +2322,7 @@ function loadFeishuConfig() {
             console.log('📋 本地存储中没有配置数据');
         }
 
-        // 检查并填充到界面
+        // 检查并填充到界面（包括所有可能的元素ID）
         const elements = {
             feishuAppIdEl: document.getElementById('feishu-app-id'),
             feishuAppSecretEl: document.getElementById('feishu-app-secret'),
@@ -2336,12 +2339,14 @@ function loadFeishuConfig() {
             'feishu-table-id': !!elements.feishuTableIdEl
         });
         
+        // 强制填充默认配置，不依赖本地存储
+        console.log('📋 强制填充默认飞书配置到界面');
         if (elements.feishuAppIdEl) {
-            elements.feishuAppIdEl.value = API_CONFIG.FEISHU.appId || '';
-            console.log('✅ App ID已填充到界面');
+            elements.feishuAppIdEl.value = API_CONFIG.FEISHU.appId;
+            console.log('✅ App ID已填充到界面:', API_CONFIG.FEISHU.appId);
         }
         if (elements.feishuAppSecretEl) {
-            elements.feishuAppSecretEl.value = API_CONFIG.FEISHU.appSecret || '';
+            elements.feishuAppSecretEl.value = API_CONFIG.FEISHU.appSecret;
             console.log('✅ App Secret已填充到界面');
         }
         if (elements.feishuDocTokenEl) {
@@ -2349,12 +2354,12 @@ function loadFeishuConfig() {
             console.log('✅ Doc Token已填充到界面');
         }
         if (elements.feishuAppTokenEl) {
-            elements.feishuAppTokenEl.value = API_CONFIG.FEISHU.appToken || '';
-            console.log('✅ App Token已填充到界面');
+            elements.feishuAppTokenEl.value = API_CONFIG.FEISHU.appToken;
+            console.log('✅ App Token已填充到界面:', API_CONFIG.FEISHU.appToken);
         }
         if (elements.feishuTableIdEl) {
-            elements.feishuTableIdEl.value = API_CONFIG.FEISHU.tableId || '';
-            console.log('✅ Table ID已填充到界面');
+            elements.feishuTableIdEl.value = API_CONFIG.FEISHU.tableId;
+            console.log('✅ Table ID已填充到界面:', API_CONFIG.FEISHU.tableId);
         }
         
         console.log('✅ 飞书配置加载完成:', {
