@@ -1942,22 +1942,28 @@ async function syncToFeishuTable(accessToken) {
         notes
     });
     
-    // 构建表格记录 - 按照飞书API文档格式
+    // 构建表格记录 - 使用多种可能的字段名格式
     const recordData = {
         "fields": {
+            // 尝试多种字段名格式，提高兼容性
             "标题": title,
-            "内容": content,
-            "字数": wordCount
-            // 注意：创建时间字段如果是"创建时间"类型会自动填充，不需要手动设置
-            // 注意：只包含在表格中实际存在的字段
+            "title": title,
+            "内容": content.substring(0, 5000), // 限制内容长度
+            "content": content.substring(0, 5000),
+            "字数": wordCount,
+            "word_count": wordCount,
+            "创建时间": currentTime,
+            "created_time": new Date().toISOString()
         }
     };
     
-    // 如果表格中有其他字段，可以添加（但要确保字段名称完全匹配）
-    // 只添加在您的表格中确实存在的字段
+    // 如果有备注，添加到记录中
     if (notes) {
         recordData.fields["补充说明"] = notes;
+        recordData.fields["notes"] = notes;
     }
+    
+    console.log('📝 记录数据详情:', JSON.stringify(recordData, null, 2));
     
     console.log('📊 准备同步到多维表格:', {
         appToken: API_CONFIG.FEISHU.appToken,
@@ -1978,9 +1984,15 @@ async function syncToFeishuTable(accessToken) {
         body: JSON.stringify(recordData)
     };
     
-    console.log('🔗 多维表格API调用:', { apiUrl, requestOptions });
+    console.log('🔗 多维表格API调用:', { 
+        apiUrl, 
+        method: requestOptions.method,
+        headers: requestOptions.headers,
+        bodyPreview: JSON.stringify(recordData, null, 2)
+    });
     
     const response = await fetch(apiUrl, requestOptions);
+    console.log('📡 API响应状态:', response.status, response.statusText);
     
     if (!response.ok) {
         const errorText = await response.text();
@@ -1989,7 +2001,8 @@ async function syncToFeishuTable(accessToken) {
             statusText: response.statusText, 
             errorText,
             apiUrl,
-            requestBody: recordData
+            requestBody: recordData,
+            responseHeaders: Object.fromEntries(response.headers.entries())
         });
         
         // 解析错误信息
