@@ -12,47 +12,10 @@ const API_BASE = isLocalEnv ? 'http://localhost:3001/api/fastgpt' : 'https://api
 console.log('🌐 当前环境:', isLocalEnv ? '本地' : 'GitHub Pages');
 console.log('🌐 API_BASE:', API_BASE);
 
-// GitHub Pages环境CORS解决方案提示
+// GitHub Pages环境静默检测，不显示弹窗
 if (!isLocalEnv) {
-    console.log('⚠️ GitHub Pages环境检测到！');
-    console.log('🔧 由于CORS限制，需要启用浏览器扩展或调整设置：');
-    console.log('1. 推荐：安装CORS浏览器扩展（如"CORS Unblock"）');
-    console.log('2. 或在控制台执行：enableGitHubPagesMode() 查看详细解决方案');
-    console.log('3. 或下载源码本地运行以获得完整功能');
-    
-    // 添加CORS解决方案提示
-    setTimeout(() => {
-        const alertDiv = document.createElement('div');
-        alertDiv.innerHTML = `
-            <div style="position: fixed; top: 10px; right: 10px; z-index: 9999; 
-                        background: #e74c3c; color: white; padding: 15px; border-radius: 8px; 
-                        max-width: 350px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-family: -apple-system, sans-serif;">
-                <h4 style="margin: 0 0 10px 0; display: flex; align-items: center;">
-                    <span style="margin-right: 8px;">🌐</span>GitHub Pages 环境
-                </h4>
-                <div style="margin: 0; font-size: 13px; line-height: 1.4;">
-                    <p style="margin: 0 0 10px 0;">由于CORS限制，请选择解决方案：</p>
-                    <div style="background: rgba(255,255,255,0.1); padding: 8px; border-radius: 4px; margin-bottom: 8px;">
-                        <strong>🔧 方案1（推荐）：</strong><br>
-                        安装浏览器扩展"CORS Unblock"
-                    </div>
-                    <div style="background: rgba(255,255,255,0.1); padding: 8px; border-radius: 4px; margin-bottom: 8px;">
-                        <strong>💻 方案2：</strong><br>
-                        控制台执行 <code>enableGitHubPagesMode()</code>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.1); padding: 8px; border-radius: 4px;">
-                        <strong>📦 方案3：</strong><br>
-                        下载源码本地运行
-                    </div>
-                </div>
-                <button onclick="this.parentElement.remove()" 
-                        style="position: absolute; top: 8px; right: 10px; 
-                               background: none; border: none; color: white; 
-                               font-size: 18px; cursor: pointer; padding: 0; width: 20px; height: 20px;">×</button>
-            </div>
-        `;
-        document.body.appendChild(alertDiv);
-    }, 1000);
+    console.log('🌐 GitHub Pages环境已启用');
+    console.log('🚀 使用代理模式处理API调用');
 }
 
 // API配置 - 用户配置信息
@@ -591,6 +554,10 @@ async function performStyleAnalysis() {
     
     console.log('🔍 [调试] 开始风格分析流程');
     appState.isAnalyzing = true;
+    
+    // 立即更新按钮状态显示加载动效
+    checkLearningButtonStatus();
+    
     updateAnalysisStatus('正在分析风格...');
     showToast('正在调用FastGPT API进行风格分析，请稍候...', 'info');
     
@@ -1948,6 +1915,13 @@ async function syncToFeishu() {
     // 检查飞书配置
     if (!checkFeishuConfig()) {
         showToast('请先完成飞书配置：点击右下角设置按钮 → 飞书文档配置 → 填写App ID和App Secret → 保存', 'warning');
+        return;
+    }
+    
+    // 线上环境暂时不支持飞书同步，因为GitHub Pages不支持API代理
+    if (!isLocalEnv) {
+        showToast('飞书同步功能暂时仅支持本地环境使用，线上环境因GitHub Pages限制无法调用飞书API', 'warning');
+        console.log('💡 解决方案：1. 下载源码本地运行 2. 使用Vercel等支持服务端功能的平台部署');
         return;
     }
     
