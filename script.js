@@ -20,6 +20,12 @@ let API_CONFIG = {
         apiKey: 'fastgpt-p2WSK5LRZZM3tVzk0XRT4vERkQ2PYLXi6rFAZdHzzuB7mSicDLRBXiymej', // 写死的内容生成密钥
         workflowId: '685c9d7e6adb97a0858caaa6' // 内容创作工作流ID（已修正）
     },
+    // 飞书配置
+    FEISHU: {
+        appId: '',
+        appSecret: '',
+        docToken: '' // 可选，用于更新现有文档
+    },
     // 接口模式选择：'workflow' 或 'chat'
     MODE: 'chat' // 固定使用对话接口模式
 };
@@ -2558,6 +2564,569 @@ function showStyleAnalysis(content) {
 // 内容风格现在使用textarea，用户可以直接编辑
 console.log('✅ script.js加载完成 - 使用textarea进行编辑');
 
+// ==================== 编辑、下载和飞书同步功能 ====================
+
+// 编辑生成的内容
+function editGeneratedContent() {
+    const resultContent = document.getElementById('result-content');
+    if (!resultContent || !appState.generatedContent) {
+        showToast('没有可编辑的内容', 'warning');
+        return;
+    }
+    
+    // 创建编辑模态框
+    const modal = document.createElement('div');
+    modal.className = 'edit-modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    `;
+    
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        width: 90%;
+        max-width: 1200px;
+        height: 80%;
+        max-height: 80vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    `;
+    
+    modalContent.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3>编辑内容</h3>
+            <button onclick="this.closest('.edit-modal').remove()" style="background: none; border: none; font-size: 20px; cursor: pointer;">×</button>
+        </div>
+        <textarea id="edit-textarea" style="
+            flex: 1;
+            min-height: 400px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 16px;
+            line-height: 1.8;
+            resize: vertical;
+            outline: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        ">${appState.generatedContent}</textarea>
+        <div style="display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end;">
+            <button onclick="this.closest('.edit-modal').remove()" style="
+                padding: 10px 20px;
+                background: #6c757d;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+            ">取消</button>
+            <button onclick="saveEditedContent()" style="
+                padding: 10px 20px;
+                background: #007bff;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+            ">保存</button>
+        </div>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+}
+
+// 保存编辑的内容
+function saveEditedContent() {
+    const textarea = document.getElementById('edit-textarea');
+    if (!textarea) return;
+    
+    const newContent = textarea.value;
+    if (newContent.trim() === '') {
+        showToast('内容不能为空', 'warning');
+        return;
+    }
+    
+    // 更新全局状态
+    appState.generatedContent = newContent;
+    
+    // 更新显示内容
+    const resultContent = document.getElementById('result-content');
+    if (resultContent) {
+        resultContent.innerHTML = marked.parse(newContent);
+        
+        // 更新字数统计
+        updateWordCount(newContent);
+    }
+    
+    // 关闭模态框
+    document.querySelector('.edit-modal').remove();
+    
+    showToast('内容已更新', 'success');
+}
+
+// 下载生成的内容
+function downloadGeneratedContent() {
+    if (!appState.generatedContent) {
+        showToast('没有可下载的内容', 'warning');
+        return;
+    }
+    
+    // 获取主题作为文件名
+    const topicEl = document.getElementById('topic');
+    const topic = topicEl ? topicEl.value.trim() || '生成内容' : '生成内容';
+    const timestamp = new Date().toLocaleDateString('zh-CN').replace(/\//g, '-');
+    const filename = `${topic}_${timestamp}.md`;
+    
+    // 创建下载链接
+    const blob = new Blob([appState.generatedContent], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // 释放URL对象
+    URL.revokeObjectURL(url);
+    
+    showToast(`文件已下载：${filename}`, 'success');
+}
+
+// 同步到飞书文档
+async function syncToFeishu() {
+    if (!appState.generatedContent) {
+        showToast('没有可同步的内容', 'warning');
+        return;
+    }
+    
+    // 检查飞书配置
+    if (!checkFeishuConfig()) {
+        showToast('请先完成飞书配置：点击右下角设置按钮 → 飞书文档配置 → 填写App ID和App Secret → 保存', 'warning');
+        return;
+    }
+    
+    try {
+        const syncBtn = document.querySelector('.sync-btn');
+        if (syncBtn) {
+            syncBtn.disabled = true;
+            syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        }
+        
+        showToast('正在同步到飞书文档...', 'info');
+        
+        // 获取访问令牌
+        const accessToken = await getFeishuAccessToken();
+        
+        // 获取主题作为文档标题
+        const topicEl = document.getElementById('topic');
+        const title = topicEl ? topicEl.value.trim() || '生成内容' : '生成内容';
+        
+        let docUrl;
+        
+        if (API_CONFIG.FEISHU.docToken) {
+            // 更新现有文档
+            docUrl = await updateFeishuDoc(accessToken, API_CONFIG.FEISHU.docToken, appState.generatedContent);
+        } else {
+            // 创建新文档
+            const result = await createFeishuDoc(accessToken, title, appState.generatedContent);
+            docUrl = result.url;
+            
+            // 保存文档Token供下次使用
+            API_CONFIG.FEISHU.docToken = result.docToken;
+            saveConfigToStorage();
+        }
+        
+        showToast('已成功同步到飞书文档', 'success');
+        
+        // 询问是否打开文档
+        if (confirm('同步成功！是否打开飞书文档？')) {
+            window.open(docUrl, '_blank');
+        }
+        
+    } catch (error) {
+        console.error('飞书同步失败:', error);
+        
+        // 检查是否是CORS错误
+        const isLocalEnv = window.location.hostname === 'localhost' ||
+                          window.location.hostname === '127.0.0.1';
+        
+        if (isLocalEnv && (error.message.includes('CORS') || error.message.includes('Failed to fetch'))) {
+            showToast('本地环境CORS限制，飞书同步功能需要在线上环境使用', 'warning');
+            console.log('💡 提示: 飞书API不支持本地环境直接调用，请部署到线上环境使用');
+        } else {
+            showToast(`飞书同步失败: ${error.message}`, 'error');
+        }
+    } finally {
+        const syncBtn = document.querySelector('.sync-btn');
+        if (syncBtn) {
+            syncBtn.disabled = false;
+            syncBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i>';
+        }
+    }
+}
+
+// 更新字数统计
+function updateWordCount(content) {
+    const wordCount = content.length;
+    const wordCountDisplay = document.getElementById('word-count-display');
+    if (wordCountDisplay) {
+        wordCountDisplay.textContent = `约 ${wordCount} 字`;
+    }
+}
+
+// 飞书API相关函数
+async function getFeishuAccessToken() {
+    // 检测环境并选择API端点
+    const isLocalEnv = window.location.hostname === 'localhost' ||
+                      window.location.hostname === '127.0.0.1';
+    
+    let apiUrl, requestOptions;
+    
+    if (isLocalEnv) {
+        // 本地环境：尝试直接调用（可能会CORS失败）
+        apiUrl = 'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal';
+        requestOptions = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                app_id: API_CONFIG.FEISHU.appId,
+                app_secret: API_CONFIG.FEISHU.appSecret
+            })
+        };
+    } else {
+        // 线上环境：使用代理
+        apiUrl = '/api/feishu-proxy';
+        requestOptions = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                path: '/open-apis/auth/v3/tenant_access_token/internal',
+                app_id: API_CONFIG.FEISHU.appId,
+                app_secret: API_CONFIG.FEISHU.appSecret
+            })
+        };
+    }
+    
+    console.log('🔑 获取飞书访问令牌:', { apiUrl, isLocalEnv });
+    
+    const response = await fetch(apiUrl, requestOptions);
+    
+    if (!response.ok) {
+        throw new Error(`获取访问令牌失败: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    if (result.code !== 0) {
+        throw new Error(`获取访问令牌失败: ${result.msg}`);
+    }
+    
+    return result.tenant_access_token;
+}
+
+async function createFeishuDoc(accessToken, title, content) {
+    // 检测环境并选择API端点
+    const isLocalEnv = window.location.hostname === 'localhost' ||
+                      window.location.hostname === '127.0.0.1';
+    
+    let apiUrl, requestOptions;
+    
+    if (isLocalEnv) {
+        // 本地环境：直接调用
+        apiUrl = 'https://open.feishu.cn/open-apis/docx/v1/documents';
+        requestOptions = {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                title: title,
+                folder_token: ''
+            })
+        };
+    } else {
+        // 线上环境：使用代理
+        apiUrl = '/api/feishu-proxy';
+        requestOptions = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                path: '/open-apis/docx/v1/documents',
+                title: title,
+                folder_token: '',
+                _headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            })
+        };
+    }
+    
+    // 先创建文档
+    const createResponse = await fetch(apiUrl, requestOptions);
+    
+    if (!createResponse.ok) {
+        throw new Error(`创建文档失败: ${createResponse.status}`);
+    }
+    
+    const createResult = await createResponse.json();
+    if (createResult.code !== 0) {
+        throw new Error(`创建文档失败: ${createResult.msg}`);
+    }
+    
+    const docToken = createResult.data.document.document_id;
+    
+    // 更新文档内容
+    await updateFeishuDocContent(accessToken, docToken, content);
+    
+    return {
+        docToken: docToken,
+        url: `https://docs.feishu.cn/docx/${docToken}`
+    };
+}
+
+async function updateFeishuDoc(accessToken, docToken, content) {
+    await updateFeishuDocContent(accessToken, docToken, content);
+    return `https://docs.feishu.cn/docx/${docToken}`;
+}
+
+async function updateFeishuDocContent(accessToken, docToken, content) {
+    // 转换markdown为飞书文档格式
+    const blocks = convertMarkdownToFeishuBlocks(content);
+    
+    // 检测环境并选择API端点
+    const isLocalEnv = window.location.hostname === 'localhost' ||
+                      window.location.hostname === '127.0.0.1';
+    
+    let apiUrl, requestOptions;
+    
+    if (isLocalEnv) {
+        // 本地环境：直接调用
+        apiUrl = `https://open.feishu.cn/open-apis/docx/v1/documents/${docToken}/blocks/batch_update`;
+        requestOptions = {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                requests: [{
+                    request_id: Date.now().toString(),
+                    request_type: 'INSERT',
+                    insert_payload: {
+                        element: {
+                            block_type: 'text',
+                            text: {
+                                style: {},
+                                elements: blocks
+                            }
+                        },
+                        location: {
+                            zone_id: 'body'
+                        }
+                    }
+                }]
+            })
+        };
+    } else {
+        // 线上环境：使用代理
+        apiUrl = '/api/feishu-proxy';
+        requestOptions = {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                path: `/open-apis/docx/v1/documents/${docToken}/blocks/batch_update`,
+                requests: [{
+                    request_id: Date.now().toString(),
+                    request_type: 'INSERT',
+                    insert_payload: {
+                        element: {
+                            block_type: 'text',
+                            text: {
+                                style: {},
+                                elements: blocks
+                            }
+                        },
+                        location: {
+                            zone_id: 'body'
+                        }
+                    }
+                }],
+                _headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            })
+        };
+    }
+    
+    const response = await fetch(apiUrl, requestOptions);
+    
+    if (!response.ok) {
+        throw new Error(`更新文档内容失败: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    if (result.code !== 0) {
+        throw new Error(`更新文档内容失败: ${result.msg}`);
+    }
+}
+
+function convertMarkdownToFeishuBlocks(content) {
+    const lines = content.split('\n');
+    const blocks = [];
+    
+    lines.forEach(line => {
+        if (line.trim()) {
+            blocks.push({
+                tag: 'text',
+                text: line
+            });
+        }
+    });
+    
+    return blocks;
+}
+
+// ==================== 飞书配置管理功能 ====================
+
+// 保存飞书配置
+function saveFeishuConfig() {
+    try {
+        const feishuAppIdEl = document.getElementById('feishu-app-id');
+        const feishuAppSecretEl = document.getElementById('feishu-app-secret');
+        const feishuDocTokenEl = document.getElementById('feishu-doc-token');
+        
+        if (!feishuAppIdEl || !feishuAppSecretEl) {
+            showToast('未找到飞书配置输入框', 'error');
+            return;
+        }
+
+        // 更新API_CONFIG
+        API_CONFIG.FEISHU.appId = feishuAppIdEl.value.trim();
+        API_CONFIG.FEISHU.appSecret = feishuAppSecretEl.value.trim();
+        API_CONFIG.FEISHU.docToken = feishuDocTokenEl ? feishuDocTokenEl.value.trim() : '';
+
+        // 验证必填字段
+        if (!API_CONFIG.FEISHU.appId) {
+            showToast('请输入飞书App ID', 'warning');
+            feishuAppIdEl.focus();
+            return;
+        }
+        if (!API_CONFIG.FEISHU.appSecret) {
+            showToast('请输入飞书App Secret', 'warning');
+            feishuAppSecretEl.focus();
+            return;
+        }
+
+        // 保存到本地存储
+        localStorage.setItem('boss_kb_config', JSON.stringify(API_CONFIG));
+        
+        // 保存成功反馈
+        const saveBtn = event.target;
+        const originalHTML = saveBtn.innerHTML;
+        const originalBg = saveBtn.style.background;
+        
+        saveBtn.innerHTML = '<i class="fas fa-check" style="margin-right: 8px;"></i>已保存';
+        saveBtn.style.background = '#4caf50';
+        saveBtn.disabled = true;
+        
+        setTimeout(() => {
+            saveBtn.innerHTML = originalHTML;
+            saveBtn.style.background = originalBg;
+            saveBtn.disabled = false;
+        }, 2000);
+        
+        showToast('飞书配置已保存', 'success');
+        console.log('✅ 飞书配置已保存:', {
+            appId: API_CONFIG.FEISHU.appId,
+            appSecret: API_CONFIG.FEISHU.appSecret ? '***已设置***' : '未设置',
+            docToken: API_CONFIG.FEISHU.docToken || '未设置'
+        });
+        
+    } catch (error) {
+        console.error('❌ 飞书配置保存失败:', error);
+        showToast('保存失败: ' + error.message, 'error');
+    }
+}
+
+// 加载飞书配置
+function loadFeishuConfig() {
+    try {
+        // 从本地存储加载配置
+        const savedConfig = localStorage.getItem('boss_kb_config');
+        if (savedConfig) {
+            const config = JSON.parse(savedConfig);
+            if (config.FEISHU) {
+                API_CONFIG.FEISHU = { ...API_CONFIG.FEISHU, ...config.FEISHU };
+            }
+        }
+
+        // 填充到界面
+        const feishuAppIdEl = document.getElementById('feishu-app-id');
+        const feishuAppSecretEl = document.getElementById('feishu-app-secret');
+        const feishuDocTokenEl = document.getElementById('feishu-doc-token');
+        
+        if (feishuAppIdEl) feishuAppIdEl.value = API_CONFIG.FEISHU.appId || '';
+        if (feishuAppSecretEl) feishuAppSecretEl.value = API_CONFIG.FEISHU.appSecret || '';
+        if (feishuDocTokenEl) feishuDocTokenEl.value = API_CONFIG.FEISHU.docToken || '';
+        
+        console.log('✅ 飞书配置已加载:', {
+            appId: API_CONFIG.FEISHU.appId || '未设置',
+            appSecret: API_CONFIG.FEISHU.appSecret ? '***已设置***' : '未设置',
+            docToken: API_CONFIG.FEISHU.docToken || '未设置'
+        });
+    } catch (error) {
+        console.error('❌ 飞书配置加载失败:', error);
+    }
+}
+
+// 检查飞书配置状态
+function checkFeishuConfig() {
+    const hasAppId = API_CONFIG.FEISHU && API_CONFIG.FEISHU.appId;
+    const hasAppSecret = API_CONFIG.FEISHU && API_CONFIG.FEISHU.appSecret;
+    
+    if (hasAppId && hasAppSecret) {
+        console.log('✅ 飞书配置完整');
+        return true;
+    } else {
+        console.log('⚠️ 飞书配置不完整:', {
+            appId: hasAppId ? '已设置' : '未设置',
+            appSecret: hasAppSecret ? '已设置' : '未设置'
+        });
+        return false;
+    }
+}
+
+// 全局暴露功能函数
+window.editGeneratedContent = editGeneratedContent;
+window.downloadGeneratedContent = downloadGeneratedContent;
+window.syncToFeishu = syncToFeishu;
+window.saveEditedContent = saveEditedContent;
+window.saveFeishuConfig = saveFeishuConfig;
+window.loadFeishuConfig = loadFeishuConfig;
+window.checkFeishuConfig = checkFeishuConfig;
+
 // 检查关键函数是否可用
 console.log('🔍 检查关键函数可用性:');
 console.log('- selectFiles:', typeof selectFiles);
@@ -2649,71 +3218,75 @@ document.querySelector('.copy-test-url-btn').addEventListener('click', async fun
 });
 
 // 隐私弹窗功能
-const privacyModal = document.querySelector('.privacy-modal');
-const privacyBtn = document.querySelector('.privacy-btn');
-let closeModalBtn = document.querySelector('.close-modal-btn');
-const copyButtons = document.querySelectorAll('.copy-btn');
-
-// 显示弹窗
 function showPrivacyModal() {
-    privacyModal.style.display = 'flex';
-    document.body.style.overflow = 'hidden'; // 防止背景滚动
+    const privacyModal = document.querySelector('.privacy-modal');
+    if (privacyModal) {
+        privacyModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // 防止背景滚动
+    }
 }
 
 // 关闭弹窗
 function closePrivacyModal() {
-    privacyModal.style.display = 'none';
-    document.body.style.overflow = 'auto';
+    const privacyModal = document.querySelector('.privacy-modal');
+    if (privacyModal) {
+        privacyModal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
 }
 
-// 点击按钮显示弹窗
-if (privacyBtn) {
-    privacyBtn.addEventListener('click', showPrivacyModal);
-}
-
-// 点击关闭按钮关闭弹窗
-if (closeModalBtn) {
-    closeModalBtn.addEventListener('click', closePrivacyModal);
-}
-
-// 点击弹窗外部关闭弹窗
-if (privacyModal) {
-    privacyModal.addEventListener('click', (e) => {
-        if (e.target === privacyModal) {
-            closePrivacyModal();
-        }
-    });
-}
-
-// 复制功能
-copyButtons.forEach(button => {
-    button.addEventListener('click', async () => {
-        const textToCopy = button.getAttribute('data-text');
-        try {
-            await navigator.clipboard.writeText(textToCopy);
-            
-            // 视觉反馈
-            button.classList.add('success');
-            const originalIcon = button.innerHTML;
-            button.innerHTML = '<i class="fas fa-check"></i>';
-            
-            setTimeout(() => {
-                button.classList.remove('success');
-                button.innerHTML = originalIcon;
-            }, 2000);
-        } catch (err) {
-            console.error('复制失败:', err);
-        }
-    });
-});
-
-// 确保DOM加载完成后重新绑定事件
+// 确保DOM加载完成后绑定所有事件
 document.addEventListener('DOMContentLoaded', function() {
-    // 重新获取关闭按钮元素（防止DOM未完全加载）
-    closeModalBtn = document.querySelector('.close-modal-btn');
+    const privacyModal = document.querySelector('.privacy-modal');
+    const privacyBtn = document.querySelector('.privacy-btn');
+    const closeModalBtn = document.querySelector('.close-modal-btn');
+    const copyButtons = document.querySelectorAll('.copy-btn');
+
+    console.log('隐私弹窗初始化:', { privacyModal, privacyBtn, closeModalBtn, copyButtons });
+
+    // 点击隐私按钮显示弹窗
+    if (privacyBtn) {
+        privacyBtn.addEventListener('click', showPrivacyModal);
+        console.log('隐私按钮事件已绑定');
+    } else {
+        console.error('未找到隐私按钮元素 .privacy-btn');
+    }
+
+    // 点击关闭按钮关闭弹窗
     if (closeModalBtn) {
         closeModalBtn.addEventListener('click', closePrivacyModal);
     }
+
+    // 点击弹窗外部关闭弹窗
+    if (privacyModal) {
+        privacyModal.addEventListener('click', (e) => {
+            if (e.target === privacyModal) {
+                closePrivacyModal();
+            }
+        });
+    }
+
+    // 复制功能
+    copyButtons.forEach(button => {
+        button.addEventListener('click', async () => {
+            const textToCopy = button.getAttribute('data-text');
+            try {
+                await navigator.clipboard.writeText(textToCopy);
+                
+                // 视觉反馈
+                button.classList.add('success');
+                const originalIcon = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check"></i>';
+                
+                setTimeout(() => {
+                    button.classList.remove('success');
+                    button.innerHTML = originalIcon;
+                }, 2000);
+            } catch (err) {
+                console.error('复制失败:', err);
+            }
+        });
+    });
     
     // 添加ESC键关闭功能
     document.addEventListener('keydown', function(e) {
@@ -2721,6 +3294,11 @@ document.addEventListener('DOMContentLoaded', function() {
             closePrivacyModal();
         }
     });
+    
+    // 延迟加载飞书配置，确保元素已存在
+    setTimeout(() => {
+        loadFeishuConfig();
+    }, 500);
 });
 
 // 全局函数，供HTML onclick使用
@@ -2780,11 +3358,7 @@ function closeFullscreenModal() {
     modal.style.display = 'none';
 }
 
-// 同步到飞书文档
-function syncToFeishu() {
-    // TODO: 实现飞书文档同步逻辑
-    alert('飞书文档同步功能即将上线');
-}
+// 旧的syncToFeishu函数已移除，使用下方完整实现的版本
 
 // 为按钮添加事件监听
 document.addEventListener('DOMContentLoaded', function() {

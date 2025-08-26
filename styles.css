@@ -100,14 +100,19 @@ body {
     grid-template-columns: 1fr 1fr;
     gap: 30px;
     margin-bottom: 20px;
+    width: 100%; /* 确保全宽 */
+    max-width: none; /* 移除最大宽度限制 */
 }
 
 .upload-area, .url-area {
     background: #f8f9fa;
     border-radius: 15px;
-    padding: 25px;
+    padding: 30px 25px; /* 增加上下padding */
     border: 2px dashed #dee2e6;
     transition: all 0.3s ease;
+    min-height: 280px; /* 设置最小高度，让视觉更平衡 */
+    display: flex;
+    flex-direction: column;
 }
 
 .upload-area:hover, .url-area:hover {
@@ -136,6 +141,11 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     margin-bottom: 20px;
+    flex: 1; /* 让上传区域占据可用空间 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 160px; /* 设置最小高度 */
 }
 
 .upload-zone:hover {
@@ -1759,6 +1769,7 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.2);
     max-width: 1000px;
     margin: 0 auto 30px auto;
+    width: 100%; /* 确保所有模块宽度一致 */
 }
 
 /* 表单区域样式优化 */

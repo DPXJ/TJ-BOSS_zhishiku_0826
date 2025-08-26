@@ -1824,9 +1824,10 @@ function editGeneratedContent() {
         background: white;
         border-radius: 12px;
         padding: 20px;
-        width: 80%;
-        max-width: 800px;
-        max-height: 80%;
+        width: 90%;
+        max-width: 1200px;
+        height: 80%;
+        max-height: 80vh;
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -1839,13 +1840,15 @@ function editGeneratedContent() {
         </div>
         <textarea id="edit-textarea" style="
             flex: 1;
+            min-height: 400px;
             border: 2px solid #e9ecef;
             border-radius: 8px;
             padding: 15px;
-            font-size: 14px;
-            line-height: 1.6;
-            resize: none;
+            font-size: 16px;
+            line-height: 1.8;
+            resize: vertical;
             outline: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
         ">${appState.generatedContent}</textarea>
         <div style="display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end;">
             <button onclick="this.closest('.edit-modal').remove()" style="
@@ -1940,8 +1943,8 @@ async function syncToFeishu() {
     }
     
     // 检查飞书配置
-    if (!API_CONFIG.FEISHU.appId || !API_CONFIG.FEISHU.appSecret) {
-        showToast('请先配置飞书应用信息', 'warning');
+    if (!checkFeishuConfig()) {
+        showToast('请先完成飞书配置：点击右下角设置按钮 → 飞书文档配置 → 填写App ID和App Secret → 保存', 'warning');
         return;
     }
     
@@ -1997,21 +2000,41 @@ async function syncToFeishu() {
 
 // 获取飞书访问令牌
 async function getFeishuAccessToken() {
-    // 在线上环境可能需要使用CORS代理
-    const apiUrl = isLocalEnv ? 
-        'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal' :
-        'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal';
+    // 检测环境并选择API端点
+    let apiUrl, requestOptions;
     
-    const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            app_id: API_CONFIG.FEISHU.appId,
-            app_secret: API_CONFIG.FEISHU.appSecret
-        })
-    });
+    if (isLocalEnv) {
+        // 本地环境：尝试直接调用（可能会CORS失败）
+        apiUrl = 'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal';
+        requestOptions = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                app_id: API_CONFIG.FEISHU.appId,
+                app_secret: API_CONFIG.FEISHU.appSecret
+            })
+        };
+    } else {
+        // 线上环境：使用代理
+        apiUrl = '/api/feishu-proxy';
+        requestOptions = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                path: '/open-apis/auth/v3/tenant_access_token/internal',
+                app_id: API_CONFIG.FEISHU.appId,
+                app_secret: API_CONFIG.FEISHU.appSecret
+            })
+        };
+    }
+    
+    console.log('🔑 获取飞书访问令牌:', { apiUrl, isLocalEnv });
+    
+    const response = await fetch(apiUrl, requestOptions);
     
     if (!response.ok) {
         throw new Error(`获取访问令牌失败: ${response.status}`);
@@ -2027,18 +2050,44 @@ async function getFeishuAccessToken() {
 
 // 创建飞书文档
 async function createFeishuDoc(accessToken, title, content) {
+    // 检测环境并选择API端点
+    let apiUrl, requestOptions;
+    
+    if (isLocalEnv) {
+        // 本地环境：直接调用
+        apiUrl = 'https://open.feishu.cn/open-apis/docx/v1/documents';
+        requestOptions = {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                title: title,
+                folder_token: '' // 可以指定文件夹
+            })
+        };
+    } else {
+        // 线上环境：使用代理
+        apiUrl = '/api/feishu-proxy';
+        requestOptions = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                path: '/open-apis/docx/v1/documents',
+                title: title,
+                folder_token: '',
+                _headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            })
+        };
+    }
+    
     // 先创建文档
-    const createResponse = await fetch('https://open.feishu.cn/open-apis/docx/v1/documents', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            title: title,
-            folder_token: '' // 可以指定文件夹
-        })
-    });
+    const createResponse = await fetch(apiUrl, requestOptions);
     
     if (!createResponse.ok) {
         throw new Error(`创建文档失败: ${createResponse.status}`);
@@ -2071,31 +2120,71 @@ async function updateFeishuDocContent(accessToken, docToken, content) {
     // 转换markdown为飞书文档格式
     const blocks = convertMarkdownToFeishuBlocks(content);
     
-    const response = await fetch(`https://open.feishu.cn/open-apis/docx/v1/documents/${docToken}/blocks/batch_update`, {
-        method: 'PATCH',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            requests: [{
-                request_id: Date.now().toString(),
-                request_type: 'INSERT',
-                insert_payload: {
-                    element: {
-                        block_type: 'text',
-                        text: {
-                            style: {},
-                            elements: blocks
+    // 检测环境并选择API端点
+    let apiUrl, requestOptions;
+    
+    if (isLocalEnv) {
+        // 本地环境：直接调用
+        apiUrl = `https://open.feishu.cn/open-apis/docx/v1/documents/${docToken}/blocks/batch_update`;
+        requestOptions = {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                requests: [{
+                    request_id: Date.now().toString(),
+                    request_type: 'INSERT',
+                    insert_payload: {
+                        element: {
+                            block_type: 'text',
+                            text: {
+                                style: {},
+                                elements: blocks
+                            }
+                        },
+                        location: {
+                            zone_id: 'body'
                         }
-                    },
-                    location: {
-                        zone_id: 'body'
                     }
+                }]
+            })
+        };
+    } else {
+        // 线上环境：使用代理
+        apiUrl = '/api/feishu-proxy';
+        requestOptions = {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                path: `/open-apis/docx/v1/documents/${docToken}/blocks/batch_update`,
+                requests: [{
+                    request_id: Date.now().toString(),
+                    request_type: 'INSERT',
+                    insert_payload: {
+                        element: {
+                            block_type: 'text',
+                            text: {
+                                style: {},
+                                elements: blocks
+                            }
+                        },
+                        location: {
+                            zone_id: 'body'
+                        }
+                    }
+                }],
+                _headers: {
+                    'Authorization': `Bearer ${accessToken}`
                 }
-            }]
-        })
-    });
+            })
+        };
+    }
+    
+    const response = await fetch(apiUrl, requestOptions);
     
     if (!response.ok) {
         throw new Error(`更新文档内容失败: ${response.status}`);
@@ -2176,8 +2265,89 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(loadFeishuConfig, 1000);
 });
 
+// ==================== 飞书配置管理功能 ====================
+
+// 保存飞书配置
+function saveFeishuConfig() {
+    try {
+        const feishuAppIdEl = document.getElementById('feishu-app-id');
+        const feishuAppSecretEl = document.getElementById('feishu-app-secret');
+        const feishuDocTokenEl = document.getElementById('feishu-doc-token');
+        
+        if (!feishuAppIdEl || !feishuAppSecretEl) {
+            showToast('未找到飞书配置输入框', 'error');
+            return;
+        }
+
+        // 更新API_CONFIG
+        API_CONFIG.FEISHU.appId = feishuAppIdEl.value.trim();
+        API_CONFIG.FEISHU.appSecret = feishuAppSecretEl.value.trim();
+        API_CONFIG.FEISHU.docToken = feishuDocTokenEl ? feishuDocTokenEl.value.trim() : '';
+
+        // 验证必填字段
+        if (!API_CONFIG.FEISHU.appId) {
+            showToast('请输入飞书App ID', 'warning');
+            feishuAppIdEl.focus();
+            return;
+        }
+        if (!API_CONFIG.FEISHU.appSecret) {
+            showToast('请输入飞书App Secret', 'warning');
+            feishuAppSecretEl.focus();
+            return;
+        }
+
+        // 保存到本地存储
+        saveConfigToStorage();
+        
+        // 保存成功反馈
+        const saveBtn = event.target;
+        const originalHTML = saveBtn.innerHTML;
+        const originalBg = saveBtn.style.background;
+        
+        saveBtn.innerHTML = '<i class="fas fa-check" style="margin-right: 8px;"></i>已保存';
+        saveBtn.style.background = '#4caf50';
+        saveBtn.disabled = true;
+        
+        setTimeout(() => {
+            saveBtn.innerHTML = originalHTML;
+            saveBtn.style.background = originalBg;
+            saveBtn.disabled = false;
+        }, 2000);
+        
+        showToast('飞书配置已保存', 'success');
+        console.log('✅ 飞书配置已保存:', {
+            appId: API_CONFIG.FEISHU.appId,
+            appSecret: API_CONFIG.FEISHU.appSecret ? '***已设置***' : '未设置',
+            docToken: API_CONFIG.FEISHU.docToken || '未设置'
+        });
+        
+    } catch (error) {
+        console.error('❌ 飞书配置保存失败:', error);
+        showToast('保存失败: ' + error.message, 'error');
+    }
+}
+
+// 检查飞书配置状态
+function checkFeishuConfig() {
+    const hasAppId = API_CONFIG.FEISHU && API_CONFIG.FEISHU.appId;
+    const hasAppSecret = API_CONFIG.FEISHU && API_CONFIG.FEISHU.appSecret;
+    
+    if (hasAppId && hasAppSecret) {
+        console.log('✅ 飞书配置完整');
+        return true;
+    } else {
+        console.log('⚠️ 飞书配置不完整:', {
+            appId: hasAppId ? '已设置' : '未设置',
+            appSecret: hasAppSecret ? '已设置' : '未设置'
+        });
+        return false;
+    }
+}
+
 // 全局暴露新增的功能函数（在函数定义之后）
 window.editGeneratedContent = editGeneratedContent;
 window.downloadGeneratedContent = downloadGeneratedContent;
 window.syncToFeishu = syncToFeishu;
-window.saveEditedContent = saveEditedContent; 
+window.saveEditedContent = saveEditedContent;
+window.saveFeishuConfig = saveFeishuConfig;
+window.checkFeishuConfig = checkFeishuConfig; 

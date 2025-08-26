@@ -342,10 +342,47 @@
                     </div>
                   </div>
                   <div style="margin-top: 15px; padding: 12px; background-color: #e3f2fd; border-radius: 6px; border-left: 4px solid #2196f3;">
-                    <p style="margin: 0; color: #0d47a1; font-size: 0.9rem;">
+                    <p style="margin: 0 0 10px 0; color: #0d47a1; font-size: 0.9rem;">
                       <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
-                      配置飞书后，可将生成的内容同步到飞书文档中。需要先创建飞书应用并获取相关权限。
+                      <strong>飞书应用配置步骤：</strong>
                     </p>
+                    <ol style="margin: 0; padding-left: 20px; color: #0d47a1; font-size: 0.85rem;">
+                      <li>访问 <a href="https://open.feishu.cn/" target="_blank" style="color: #1976d2;">飞书开放平台</a></li>
+                      <li>创建自建应用 → 获取 App ID 和 App Secret</li>
+                      <li>在"权限管理"中申请以下权限：
+                        <ul style="margin: 5px 0; padding-left: 15px;">
+                          <li><strong>docx:document</strong> （必需：查看、编辑、创建新版文档）</li>
+                          <li><strong>docx:document:readonly</strong> （必需：读取文档内容）</li>
+                          <li><strong>drive:drive</strong> （可选：如需访问云空间文件夹）</li>
+                        </ul>
+                        <div style="margin-top: 8px; padding: 8px; background: rgba(255, 193, 7, 0.1); border-radius: 4px; border-left: 3px solid #ffc107;">
+                          <small style="color: #856404;"><strong>权限字段说明：</strong><br>
+                          • 在飞书开放平台的权限管理页面<br>
+                          • 搜索上述权限名称并申请<br>
+                          • 权限申请后需要发布应用才能生效</small>
+                        </div>
+                      </li>
+                      <li>应用发布后，将 App ID 和 App Secret 填入上方配置框</li>
+                      <li><strong style="color: #d32f2f;">配置完成后，请点击下方保存按钮</strong></li>
+                      <li>首次同步会自动创建文档，后续同步会更新同一文档</li>
+                    </ol>
+                  </div>
+                  <!-- 飞书配置保存按钮 -->
+                  <div style="margin-top: 20px; text-align: center;">
+                    <button onclick="saveFeishuConfig()" style="
+                      padding: 12px 24px;
+                      background: #2196f3;
+                      color: white;
+                      border: none;
+                      border-radius: 6px;
+                      font-size: 1rem;
+                      font-weight: 600;
+                      cursor: pointer;
+                      transition: background 0.3s;
+                    " onmouseover="this.style.background='#1976d2'" onmouseout="this.style.background='#2196f3'">
+                      <i class="fas fa-save" style="margin-right: 8px;"></i>
+                      保存飞书配置
+                    </button>
                   </div>
                 </div>
 
