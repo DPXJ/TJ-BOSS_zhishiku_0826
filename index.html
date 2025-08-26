@@ -334,8 +334,8 @@
         
         // 根据环境加载对应的脚本
         const scriptSrc = isLocalEnvironment ? 
-            'script.js?v=2025011501' : 
-            'script-github-pages.js?v=2025011501';
+            'script.js?v=2025011502' : 
+            'script-github-pages.js?v=2025011502';
             
         console.log('🌐 当前环境:', isLocalEnvironment ? '本地开发' : 'GitHub Pages');
         console.log('📄 加载脚本:', scriptSrc);
@@ -344,6 +344,23 @@
         const script = document.createElement('script');
         script.src = scriptSrc;
         document.head.appendChild(script);
+        
+        // 添加环境切换和问题解决函数
+        window.switchToDirectMode = function() {
+            console.log('🔄 切换到直接调用模式...');
+            alert('🔧 切换到直接调用模式\n\n请安装CORS浏览器扩展：\n1. Chrome应用商店搜索"CORS Unblock"\n2. 安装并启用扩展\n3. 刷新页面即可正常使用');
+        };
+        
+        // 添加简单的CORS解决方案提示
+        if (!isLocalEnvironment) {
+            // 检查是否已经显示过提示
+            const hasShownTip = localStorage.getItem('corsPataTipShown');
+            if (!hasShownTip) {
+                setTimeout(() => {
+                    localStorage.setItem('corsPataTipShown', 'true');
+                }, 5000); // 5秒后标记为已显示
+            }
+        }
     </script>
 </body>
 </html> 
