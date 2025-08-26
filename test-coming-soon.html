@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试 - 功能完善中弹窗</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        .test-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        .test-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h2>测试"功能完善中"弹窗</h2>
+        <p style="margin: 20px 0; color: #666;">点击下面的按钮测试弹窗功能</p>
+        <button class="test-btn" onclick="showComingSoonModal()">
+            <i class="fas fa-robot"></i>
+            生成专属内容
+        </button>
+    </div>
+
+    <script>
+        // 显示"功能完善中"弹窗
+        function showComingSoonModal() {
+            // 创建模态框HTML
+            const modalHTML = `
+                <div id="coming-soon-modal" class="coming-soon-modal">
+                    <div class="coming-soon-modal-content">
+                        <div class="coming-soon-modal-header">
+                            <h3>
+                                <i class="fas fa-tools"></i>
+                                功能完善中
+                            </h3>
+                            <button class="close-coming-soon-btn" onclick="closeComingSoonModal()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="coming-soon-modal-body">
+                            <div class="coming-soon-icon">
+                                <i class="fas fa-cog fa-spin"></i>
+                            </div>
+                            <h4>敬请期待</h4>
+                            <p>内容生成功能正在完善中，我们将为您提供更好的体验！</p>
+                            <div class="coming-soon-features">
+                                <div class="feature-item">
+                                    <i class="fas fa-magic"></i>
+                                    <span>智能内容生成</span>
+                                </div>
+                                <div class="feature-item">
+                                    <i class="fas fa-palette"></i>
+                                    <span>个性化风格</span>
+                                </div>
+                                <div class="feature-item">
+                                    <i class="fas fa-rocket"></i>
+                                    <span>高效创作</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="coming-soon-modal-footer">
+                            <button class="coming-soon-close-btn" onclick="closeComingSoonModal()">
+                                知道了
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 添加模态框到页面
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // 显示模态框
+            const modal = document.getElementById('coming-soon-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+                // 添加淡入动画
+                setTimeout(() => {
+                    modal.style.opacity = '1';
+                }, 10);
+            }
+        }
+
+        // 关闭"功能完善中"弹窗
+        function closeComingSoonModal() {
+            const modal = document.getElementById('coming-soon-modal');
+            if (modal) {
+                modal.style.opacity = '0';
+                setTimeout(() => {
+                    modal.remove();
+                }, 300);
+            }
+        }
+    </script>
+</body>
+</html> 
