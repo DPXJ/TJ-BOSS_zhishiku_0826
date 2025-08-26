@@ -340,6 +340,51 @@
                         width: 100%;
                         box-sizing: border-box;" placeholder="文档Token，留空则创建新文档">
                     </div>
+                    
+                    <!-- 多维表格配置说明 -->
+                    <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; border-left: 4px solid #28a745;">
+                      <h4 style="margin: 0 0 12px 0; color: #155724; font-size: 1rem;">
+                        <i class="fas fa-table" style="margin-right: 8px;"></i>
+                        多维表格字段设置指南
+                      </h4>
+                      
+                      <div style="font-size: 0.9rem; color: #155724; line-height: 1.5;">
+                        <p style="margin: 0 0 12px 0; font-weight: 600;">建议的表格字段结构：</p>
+                        
+                        <div style="background: white; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
+                          <strong>基础字段（必需）：</strong>
+                          <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+                            <li><strong>标题</strong> - 单行文本（主题内容）</li>
+                            <li><strong>内容</strong> - 多行文本（生成的完整内容）</li>
+                            <li><strong>字数</strong> - 数字（内容字数统计）</li>
+                            <li><strong>创建时间</strong> - 创建时间（自动填充）</li>
+                          </ul>
+                        </div>
+                        
+                        <div style="background: white; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
+                          <strong>扩展字段（可选）：</strong>
+                          <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+                            <li><strong>风格类型</strong> - 单选（正式严谨、生动活泼等）</li>
+                            <li><strong>补充说明</strong> - 多行文本（用户备注）</li>
+                            <li><strong>状态</strong> - 单选（草稿、已审核、已发布）</li>
+                            <li><strong>标签</strong> - 多选（内容分类）</li>
+                            <li><strong>评分</strong> - 评分（内容质量评分）</li>
+                          </ul>
+                        </div>
+                        
+                        <div style="background: #fff3cd; padding: 10px; border-radius: 4px; border: 1px solid #ffeaa7;">
+                          <strong>📋 设置步骤：</strong>
+                          <ol style="margin: 8px 0 0 0; padding-left: 20px; font-size: 0.85rem;">
+                            <li>在飞书中创建多维表格</li>
+                            <li>按上述建议添加字段</li>
+                            <li>复制表格链接获取App Token（/base/后的字符串）</li>
+                            <li>获取Table ID（/tbl后的字符串）</li>
+                            <li>在上方填入App ID、App Secret</li>
+                            <li>保存配置即可使用</li>
+                          </ol>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   <div style="margin-top: 15px; padding: 12px; background-color: #e3f2fd; border-radius: 6px; border-left: 4px solid #2196f3;">
                     <p style="margin: 0 0 10px 0; color: #0d47a1; font-size: 0.9rem;">
