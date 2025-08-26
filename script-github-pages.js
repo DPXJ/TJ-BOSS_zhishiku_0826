@@ -1909,6 +1909,13 @@ function downloadGeneratedContent() {
 
 // 同步到飞书多维表格
 async function syncToFeishuTable(accessToken) {
+    console.log('🚀 开始同步到飞书多维表格');
+    console.log('🔑 访问令牌长度:', accessToken ? accessToken.length : 0);
+    console.log('📋 表格配置:', {
+        appToken: API_CONFIG.FEISHU.appToken,
+        tableId: API_CONFIG.FEISHU.tableId
+    });
+    
     const topicEl = document.getElementById('topic');
     const wordCountEl = document.getElementById('word-count');
     const notesEl = document.getElementById('notes');
@@ -1919,6 +1926,13 @@ async function syncToFeishuTable(accessToken) {
     const wordCount = wordCountEl ? parseInt(wordCountEl.value) || content.length : content.length;
     const notes = notesEl ? notesEl.value.trim() || '' : '';
     const currentTime = new Date().toLocaleString('zh-CN');
+    
+    console.log('📊 待同步数据:', {
+        title,
+        contentLength: content.length,
+        wordCount,
+        notes
+    });
     
     // 构建表格记录 - 按照飞书API文档格式
     const recordData = {
@@ -1943,8 +1957,8 @@ async function syncToFeishuTable(accessToken) {
         recordData
     });
     
-    // 调用飞书多维表格API
-    const apiUrl = `https://open.feishu.cn/open-apis/bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`;
+    // 调用飞书多维表格API - 使用Vercel代理
+    const apiUrl = `/api/feishu-proxy?path=bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`;
     const requestOptions = {
         method: 'POST',
         headers: {
@@ -2072,39 +2086,88 @@ async function syncToFeishu() {
 
 // 获取飞书访问令牌
 async function getFeishuAccessToken() {
-    // 飞书API直接调用，无需环境区分
-    const apiUrl = 'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal';
+    console.log('🚀 开始获取飞书访问令牌');
+    console.log('📝 当前飞书配置:', {
+        appId: API_CONFIG.FEISHU.appId || '未配置',
+        appSecret: API_CONFIG.FEISHU.appSecret || '未配置',
+        appToken: API_CONFIG.FEISHU.appToken || '未配置',
+        tableId: API_CONFIG.FEISHU.tableId || '未配置',
+        // 显示完整参数以便调试
+        appIdLength: API_CONFIG.FEISHU.appId ? API_CONFIG.FEISHU.appId.length : 0,
+        appSecretLength: API_CONFIG.FEISHU.appSecret ? API_CONFIG.FEISHU.appSecret.length : 0
+    });
+    
+    // 验证配置
+    if (!API_CONFIG.FEISHU.appId || !API_CONFIG.FEISHU.appSecret) {
+        console.error('❌ 飞书配置不完整');
+        throw new Error('请先配置飞书App ID和App Secret');
+    }
+    
+    // 线上环境使用Vercel代理来避免CORS问题
+    const apiUrl = '/api/feishu-proxy?path=auth/v3/tenant_access_token/internal';
+    const requestBody = {
+        app_id: API_CONFIG.FEISHU.appId,
+        app_secret: API_CONFIG.FEISHU.appSecret
+    };
     const requestOptions = {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-            app_id: API_CONFIG.FEISHU.appId,
-            app_secret: API_CONFIG.FEISHU.appSecret
-        })
+        body: JSON.stringify(requestBody)
     };
     
-    console.log('🔑 获取飞书访问令牌:', { apiUrl });
+    console.log('🔗 API请求信息:', { 
+        apiUrl, 
+        method: 'POST',
+        headers: requestOptions.headers,
+        bodyKeys: Object.keys(requestBody)
+    });
     
-    const response = await fetch(apiUrl, requestOptions);
-    
-    if (!response.ok) {
-        throw new Error(`获取访问令牌失败: ${response.status}`);
+    try {
+        const response = await fetch(apiUrl, requestOptions);
+        
+        console.log('📡 API响应状态:', {
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries())
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ HTTP请求失败:', { status: response.status, statusText: response.statusText, errorText });
+            throw new Error(`HTTP请求失败: ${response.status} - ${response.statusText}\n${errorText}`);
+        }
+        
+        const result = await response.json();
+        console.log('📋 API响应结果:', {
+            code: result.code,
+            msg: result.msg,
+            hasToken: !!result.tenant_access_token,
+            tokenLength: result.tenant_access_token ? result.tenant_access_token.length : 0
+        });
+        
+        if (result.code !== 0) {
+            console.error('❌ 飞书API返回错误:', result);
+            throw new Error(`飞书API错误: ${result.msg} (代码: ${result.code})`);
+        }
+        
+        console.log('✅ 访问令牌获取成功');
+        return result.tenant_access_token;
+        
+    } catch (error) {
+        console.error('❌ 获取访问令牌过程中发生错误:', error);
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            throw new Error('网络连接失败，请检查网络连接');
+        }
+        throw error;
     }
-    
-    const result = await response.json();
-    if (result.code !== 0) {
-        throw new Error(`获取访问令牌失败: ${result.msg}`);
-    }
-    
-    return result.tenant_access_token;
 }
 
 // 创建飞书文档
 async function createFeishuDoc(accessToken, title, content) {
-    // 飞书API直接调用创建文档
-    const apiUrl = 'https://open.feishu.cn/open-apis/docx/v1/documents';
+    // 飞书API通过Vercel代理调用创建文档
+    const apiUrl = '/api/feishu-proxy?path=docx/v1/documents';
     const requestOptions = {
         method: 'POST',
         headers: {
@@ -2151,8 +2214,8 @@ async function updateFeishuDocContent(accessToken, docToken, content) {
     // 转换markdown为飞书文档格式
     const blocks = convertMarkdownToFeishuBlocks(content);
     
-    // 飞书API直接调用更新文档
-    const apiUrl = `https://open.feishu.cn/open-apis/docx/v1/documents/${docToken}/blocks/batch_update`;
+    // 飞书API通过Vercel代理调用更新文档
+    const apiUrl = `/api/feishu-proxy?path=docx/v1/documents/${docToken}/blocks/batch_update`;
     const requestOptions = {
         method: 'PATCH',
         headers: {

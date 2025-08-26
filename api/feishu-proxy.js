@@ -13,22 +13,21 @@ export default async function handler(req, res) {
     }
 
     try {
-        // 获取请求参数
-        const { path, _headers = {}, ...requestData } = req.body;
+        // 从URL查询参数获取path
+        const { path } = req.query;
         
         if (!path) {
             return res.status(400).json({ error: 'Missing path parameter' });
         }
 
         // 构建飞书API URL
-        const feishuUrl = `https://open.feishu.cn${path}`;
+        const feishuUrl = `https://open.feishu.cn/open-apis/${path}`;
         
-        // 准备请求头，优先使用_headers中的内容
+        // 准备请求头
         const requestHeaders = {
             'Content-Type': 'application/json',
             'User-Agent': 'Boss-Knowledge-Base/1.0',
-            ..._headers,
-            // 转发其他必要的headers
+            // 转发Authorization头
             ...(req.headers.authorization && { 'Authorization': req.headers.authorization }),
             ...(req.headers['x-lark-signature'] && { 'X-Lark-Signature': req.headers['x-lark-signature'] }),
             ...(req.headers['x-lark-request-timestamp'] && { 'X-Lark-Request-Timestamp': req.headers['x-lark-request-timestamp'] }),
@@ -39,14 +38,14 @@ export default async function handler(req, res) {
             method: req.method,
             url: feishuUrl,
             headers: requestHeaders,
-            body: requestData
+            body: req.body
         });
 
         // 转发请求到飞书API
         const response = await fetch(feishuUrl, {
             method: req.method,
             headers: requestHeaders,
-            body: req.method !== 'GET' ? JSON.stringify(requestData) : undefined
+            body: req.method !== 'GET' ? JSON.stringify(req.body) : undefined
         });
 
         const responseData = await response.json();
