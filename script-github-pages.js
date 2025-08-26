@@ -77,6 +77,12 @@ let API_CONFIG = {
         apiKey: 'fastgpt-p2WSK5LRZZM3tVzk0XRT4vERkQ2PYLXi6rFAZdHzzuB7mSicDLRBXiymej', // 写死的内容生成密钥
         workflowId: '685c9d7e6adb97a0858caaa6' // 内容创作工作流ID（已修正）
     },
+    // 飞书配置
+    FEISHU: {
+        appId: '',
+        appSecret: '',
+        docToken: '' // 可选，用于更新现有文档
+    },
     // 接口模式选择：'workflow' 或 'chat'
     MODE: 'chat' // 固定使用对话接口模式
 };
@@ -1785,4 +1791,387 @@ async function testGitHubPagesAPI() {
 }
 
 // 全局暴露函数供控制台调用
-window.enableGitHubPagesMode = enableGitHubPagesMode; 
+window.enableGitHubPagesMode = enableGitHubPagesMode;
+
+// ==================== 新增功能函数 ====================
+
+// 编辑生成的内容
+function editGeneratedContent() {
+    const resultContent = document.getElementById('result-content');
+    if (!resultContent || !appState.generatedContent) {
+        showToast('没有可编辑的内容', 'warning');
+        return;
+    }
+    
+    // 创建编辑模态框
+    const modal = document.createElement('div');
+    modal.className = 'edit-modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    `;
+    
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        width: 80%;
+        max-width: 800px;
+        max-height: 80%;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    `;
+    
+    modalContent.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3>编辑内容</h3>
+            <button onclick="this.closest('.edit-modal').remove()" style="background: none; border: none; font-size: 20px; cursor: pointer;">×</button>
+        </div>
+        <textarea id="edit-textarea" style="
+            flex: 1;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+        ">${appState.generatedContent}</textarea>
+        <div style="display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end;">
+            <button onclick="this.closest('.edit-modal').remove()" style="
+                padding: 10px 20px;
+                background: #6c757d;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+            ">取消</button>
+            <button onclick="saveEditedContent()" style="
+                padding: 10px 20px;
+                background: #007bff;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+            ">保存</button>
+        </div>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+}
+
+// 保存编辑的内容
+function saveEditedContent() {
+    const textarea = document.getElementById('edit-textarea');
+    if (!textarea) return;
+    
+    const newContent = textarea.value;
+    if (newContent.trim() === '') {
+        showToast('内容不能为空', 'warning');
+        return;
+    }
+    
+    // 更新全局状态
+    appState.generatedContent = newContent;
+    
+    // 更新显示内容
+    const resultContent = document.getElementById('result-content');
+    if (resultContent) {
+        resultContent.innerHTML = marked.parse(newContent);
+        
+        // 更新字数统计
+        updateWordCount(newContent);
+    }
+    
+    // 关闭模态框
+    document.querySelector('.edit-modal').remove();
+    
+    showToast('内容已更新', 'success');
+}
+
+// 下载生成的内容
+function downloadGeneratedContent() {
+    if (!appState.generatedContent) {
+        showToast('没有可下载的内容', 'warning');
+        return;
+    }
+    
+    // 获取主题作为文件名
+    const topicEl = document.getElementById('topic');
+    const topic = topicEl ? topicEl.value.trim() || '生成内容' : '生成内容';
+    const timestamp = new Date().toLocaleDateString('zh-CN').replace(/\//g, '-');
+    const filename = `${topic}_${timestamp}.md`;
+    
+    // 创建下载链接
+    const blob = new Blob([appState.generatedContent], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // 释放URL对象
+    URL.revokeObjectURL(url);
+    
+    showToast(`文件已下载：${filename}`, 'success');
+}
+
+// 同步到飞书文档
+async function syncToFeishu() {
+    if (!appState.generatedContent) {
+        showToast('没有可同步的内容', 'warning');
+        return;
+    }
+    
+    // 检查飞书配置
+    if (!API_CONFIG.FEISHU.appId || !API_CONFIG.FEISHU.appSecret) {
+        showToast('请先配置飞书应用信息', 'warning');
+        return;
+    }
+    
+    try {
+        const syncBtn = document.querySelector('.sync-btn');
+        if (syncBtn) {
+            syncBtn.disabled = true;
+            syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        }
+        
+        showToast('正在同步到飞书文档...', 'info');
+        
+        // 获取访问令牌
+        const accessToken = await getFeishuAccessToken();
+        
+        // 获取主题作为文档标题
+        const topicEl = document.getElementById('topic');
+        const title = topicEl ? topicEl.value.trim() || '生成内容' : '生成内容';
+        
+        let docUrl;
+        
+        if (API_CONFIG.FEISHU.docToken) {
+            // 更新现有文档
+            docUrl = await updateFeishuDoc(accessToken, API_CONFIG.FEISHU.docToken, appState.generatedContent);
+        } else {
+            // 创建新文档
+            const result = await createFeishuDoc(accessToken, title, appState.generatedContent);
+            docUrl = result.url;
+            
+            // 保存文档Token供下次使用
+            API_CONFIG.FEISHU.docToken = result.docToken;
+            saveConfigToStorage();
+        }
+        
+        showToast('已成功同步到飞书文档', 'success');
+        
+        // 询问是否打开文档
+        if (confirm('同步成功！是否打开飞书文档？')) {
+            window.open(docUrl, '_blank');
+        }
+        
+    } catch (error) {
+        console.error('飞书同步失败:', error);
+        showToast(`飞书同步失败: ${error.message}`, 'error');
+    } finally {
+        const syncBtn = document.querySelector('.sync-btn');
+        if (syncBtn) {
+            syncBtn.disabled = false;
+            syncBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i>';
+        }
+    }
+}
+
+// 获取飞书访问令牌
+async function getFeishuAccessToken() {
+    // 在线上环境可能需要使用CORS代理
+    const apiUrl = isLocalEnv ? 
+        'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal' :
+        'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal';
+    
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            app_id: API_CONFIG.FEISHU.appId,
+            app_secret: API_CONFIG.FEISHU.appSecret
+        })
+    });
+    
+    if (!response.ok) {
+        throw new Error(`获取访问令牌失败: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    if (result.code !== 0) {
+        throw new Error(`获取访问令牌失败: ${result.msg}`);
+    }
+    
+    return result.tenant_access_token;
+}
+
+// 创建飞书文档
+async function createFeishuDoc(accessToken, title, content) {
+    // 先创建文档
+    const createResponse = await fetch('https://open.feishu.cn/open-apis/docx/v1/documents', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            title: title,
+            folder_token: '' // 可以指定文件夹
+        })
+    });
+    
+    if (!createResponse.ok) {
+        throw new Error(`创建文档失败: ${createResponse.status}`);
+    }
+    
+    const createResult = await createResponse.json();
+    if (createResult.code !== 0) {
+        throw new Error(`创建文档失败: ${createResult.msg}`);
+    }
+    
+    const docToken = createResult.data.document.document_id;
+    
+    // 更新文档内容
+    await updateFeishuDocContent(accessToken, docToken, content);
+    
+    return {
+        docToken: docToken,
+        url: `https://docs.feishu.cn/docx/${docToken}`
+    };
+}
+
+// 更新飞书文档
+async function updateFeishuDoc(accessToken, docToken, content) {
+    await updateFeishuDocContent(accessToken, docToken, content);
+    return `https://docs.feishu.cn/docx/${docToken}`;
+}
+
+// 更新飞书文档内容
+async function updateFeishuDocContent(accessToken, docToken, content) {
+    // 转换markdown为飞书文档格式
+    const blocks = convertMarkdownToFeishuBlocks(content);
+    
+    const response = await fetch(`https://open.feishu.cn/open-apis/docx/v1/documents/${docToken}/blocks/batch_update`, {
+        method: 'PATCH',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            requests: [{
+                request_id: Date.now().toString(),
+                request_type: 'INSERT',
+                insert_payload: {
+                    element: {
+                        block_type: 'text',
+                        text: {
+                            style: {},
+                            elements: blocks
+                        }
+                    },
+                    location: {
+                        zone_id: 'body'
+                    }
+                }
+            }]
+        })
+    });
+    
+    if (!response.ok) {
+        throw new Error(`更新文档内容失败: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    if (result.code !== 0) {
+        throw new Error(`更新文档内容失败: ${result.msg}`);
+    }
+}
+
+// 转换Markdown为飞书文档格式
+function convertMarkdownToFeishuBlocks(content) {
+    // 简单的Markdown转换，可以根据需要扩展
+    const lines = content.split('\n');
+    const blocks = [];
+    
+    lines.forEach(line => {
+        if (line.trim()) {
+            blocks.push({
+                tag: 'text',
+                text: line
+            });
+        }
+    });
+    
+    return blocks;
+}
+
+// 更新字数统计
+function updateWordCount(content) {
+    const wordCount = content.length;
+    const wordCountDisplay = document.getElementById('word-count-display');
+    if (wordCountDisplay) {
+        wordCountDisplay.textContent = `约 ${wordCount} 字`;
+    }
+}
+
+// 加载飞书配置
+function loadFeishuConfig() {
+    const feishuAppIdEl = document.getElementById('feishu-app-id');
+    const feishuAppSecretEl = document.getElementById('feishu-app-secret');
+    const feishuDocTokenEl = document.getElementById('feishu-doc-token');
+    
+    if (feishuAppIdEl) feishuAppIdEl.value = API_CONFIG.FEISHU.appId;
+    if (feishuAppSecretEl) feishuAppSecretEl.value = API_CONFIG.FEISHU.appSecret;
+    if (feishuDocTokenEl) feishuDocTokenEl.value = API_CONFIG.FEISHU.docToken;
+}
+
+// 保存飞书配置
+function saveFeishuConfig() {
+    saveConfigToStorage();
+}
+
+// 重写配置保存函数以包含飞书配置
+function saveConfigToStorage() {
+    try {
+        // 保存飞书配置到API_CONFIG
+        const feishuAppIdEl = document.getElementById('feishu-app-id');
+        const feishuAppSecretEl = document.getElementById('feishu-app-secret');
+        const feishuDocTokenEl = document.getElementById('feishu-doc-token');
+        
+        if (feishuAppIdEl) API_CONFIG.FEISHU.appId = feishuAppIdEl.value.trim();
+        if (feishuAppSecretEl) API_CONFIG.FEISHU.appSecret = feishuAppSecretEl.value.trim();
+        if (feishuDocTokenEl) API_CONFIG.FEISHU.docToken = feishuDocTokenEl.value.trim();
+        
+        // 保存到本地存储
+        localStorage.setItem('boss_kb_config', JSON.stringify(API_CONFIG));
+        console.log('✅ 配置已保存到本地存储（包含飞书配置）');
+    } catch (error) {
+        console.error('❌ 配置保存失败:', error);
+    }
+}
+
+// 在页面加载时加载飞书配置
+document.addEventListener('DOMContentLoaded', function() {
+    // 延迟加载飞书配置，确保元素已存在
+    setTimeout(loadFeishuConfig, 1000);
+}); 
