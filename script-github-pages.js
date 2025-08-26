@@ -896,9 +896,12 @@ async function generateContent() {
         return;
     }
     
+    // 风格分析是可选的，如果没有进行风格学习，使用默认风格
+    const styleOutput = appState.styleOutput || '正式严谨，条理清晰，用词准确，逻辑性强';
+    
     if (!appState.styleOutput) {
-        showToast('请先进行风格分析', 'warning');
-        return;
+        console.log('💡 未进行风格学习，使用默认风格进行生成');
+        showToast('使用默认风格生成内容（建议先进行风格学习获得更个性化效果）', 'info');
     }
     
     appState.isGenerating = true;
@@ -920,12 +923,12 @@ async function generateContent() {
             if (!API_CONFIG.FASTGPT_CONTENT.apiKey) {
                 throw new Error('对话模式需要配置内容生成API密钥');
             }
-            generatedContent = await generateContentWithChat(appState.styleOutput, contentLength, topic, styleType, remark);
+            generatedContent = await generateContentWithChat(styleOutput, contentLength, topic, styleType, remark);
         } else if (API_CONFIG.MODE === 'workflow') {
             if (!API_CONFIG.FASTGPT_CONTENT.workflowId || !API_CONFIG.FASTGPT_CONTENT.apiKey) {
                 throw new Error('工作流模式需要配置API密钥和工作流ID');
             }
-            generatedContent = await callContentGenerationWorkflow(appState.styleOutput, contentLength, topic, styleType, remark);
+            generatedContent = await callContentGenerationWorkflow(styleOutput, contentLength, topic, styleType, remark);
         } else {
             throw new Error('请设置正确的接口模式（chat 或 workflow）');
         }

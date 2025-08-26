@@ -1267,6 +1267,12 @@ async function generateContent() {
     // style_type: 用户输入的风格要求（简短描述）
     const styleType = userStyleInput || '正式严谨，条理清晰，用词准确，逻辑性强';
     
+    // 提示用户是否使用了默认风格
+    if (!appState.styleOutput) {
+        console.log('💡 未进行风格学习，使用默认风格进行生成');
+        showToast('使用默认风格生成内容（建议先进行风格学习获得更个性化效果）', 'info');
+    }
+    
     const notes = notesInput.value.trim();
     
     console.log('📋 内容生成参数准备:');
