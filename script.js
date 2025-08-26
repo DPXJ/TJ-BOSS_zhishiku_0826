@@ -2770,9 +2770,9 @@ async function syncToFeishu() {
         const isLocalEnv = window.location.hostname === 'localhost' ||
                           window.location.hostname === '127.0.0.1';
         
-        if (isLocalEnv && (error.message.includes('CORS') || error.message.includes('Failed to fetch'))) {
-            showToast('本地环境CORS限制，飞书同步功能需要在线上环境使用', 'warning');
-            console.log('💡 提示: 飞书API不支持本地环境直接调用，请部署到线上环境使用');
+        if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
+            showToast('网络连接失败，请检查网络连接或API配置', 'error');
+            console.log('💡 提示: 请检查网络连接、App ID和App Secret配置是否正确');
         } else {
             showToast(`飞书同步失败: ${error.message}`, 'error');
         }
@@ -2796,42 +2796,20 @@ function updateWordCount(content) {
 
 // 飞书API相关函数
 async function getFeishuAccessToken() {
-    // 检测环境并选择API端点
-    const isLocalEnv = window.location.hostname === 'localhost' ||
-                      window.location.hostname === '127.0.0.1';
+    // 飞书API直接调用，无需环境区分
+    const apiUrl = 'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal';
+    const requestOptions = {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            app_id: API_CONFIG.FEISHU.appId,
+            app_secret: API_CONFIG.FEISHU.appSecret
+        })
+    };
     
-    let apiUrl, requestOptions;
-    
-    if (isLocalEnv) {
-        // 本地环境：尝试直接调用（可能会CORS失败）
-        apiUrl = 'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal';
-        requestOptions = {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                app_id: API_CONFIG.FEISHU.appId,
-                app_secret: API_CONFIG.FEISHU.appSecret
-            })
-        };
-    } else {
-        // 线上环境：使用代理
-        apiUrl = '/api/feishu-proxy';
-        requestOptions = {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                path: '/open-apis/auth/v3/tenant_access_token/internal',
-                app_id: API_CONFIG.FEISHU.appId,
-                app_secret: API_CONFIG.FEISHU.appSecret
-            })
-        };
-    }
-    
-    console.log('🔑 获取飞书访问令牌:', { apiUrl, isLocalEnv });
+    console.log('🔑 获取飞书访问令牌:', { apiUrl });
     
     const response = await fetch(apiUrl, requestOptions);
     
@@ -2848,44 +2826,19 @@ async function getFeishuAccessToken() {
 }
 
 async function createFeishuDoc(accessToken, title, content) {
-    // 检测环境并选择API端点
-    const isLocalEnv = window.location.hostname === 'localhost' ||
-                      window.location.hostname === '127.0.0.1';
-    
-    let apiUrl, requestOptions;
-    
-    if (isLocalEnv) {
-        // 本地环境：直接调用
-        apiUrl = 'https://open.feishu.cn/open-apis/docx/v1/documents';
-        requestOptions = {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                title: title,
-                folder_token: ''
-            })
-        };
-    } else {
-        // 线上环境：使用代理
-        apiUrl = '/api/feishu-proxy';
-        requestOptions = {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                path: '/open-apis/docx/v1/documents',
-                title: title,
-                folder_token: '',
-                _headers: {
-                    'Authorization': `Bearer ${accessToken}`
-                }
-            })
-        };
-    }
+    // 飞书API直接调用创建文档
+    const apiUrl = 'https://open.feishu.cn/open-apis/docx/v1/documents';
+    const requestOptions = {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            title: title,
+            folder_token: ''
+        })
+    };
     
     // 先创建文档
     const createResponse = await fetch(apiUrl, requestOptions);
@@ -2919,72 +2872,33 @@ async function updateFeishuDocContent(accessToken, docToken, content) {
     // 转换markdown为飞书文档格式
     const blocks = convertMarkdownToFeishuBlocks(content);
     
-    // 检测环境并选择API端点
-    const isLocalEnv = window.location.hostname === 'localhost' ||
-                      window.location.hostname === '127.0.0.1';
-    
-    let apiUrl, requestOptions;
-    
-    if (isLocalEnv) {
-        // 本地环境：直接调用
-        apiUrl = `https://open.feishu.cn/open-apis/docx/v1/documents/${docToken}/blocks/batch_update`;
-        requestOptions = {
-            method: 'PATCH',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                requests: [{
-                    request_id: Date.now().toString(),
-                    request_type: 'INSERT',
-                    insert_payload: {
-                        element: {
-                            block_type: 'text',
-                            text: {
-                                style: {},
-                                elements: blocks
-                            }
-                        },
-                        location: {
-                            zone_id: 'body'
+    // 飞书API直接调用更新文档
+    const apiUrl = `https://open.feishu.cn/open-apis/docx/v1/documents/${docToken}/blocks/batch_update`;
+    const requestOptions = {
+        method: 'PATCH',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            requests: [{
+                request_id: Date.now().toString(),
+                request_type: 'INSERT',
+                insert_payload: {
+                    element: {
+                        block_type: 'text',
+                        text: {
+                            style: {},
+                            elements: blocks
                         }
+                    },
+                    location: {
+                        zone_id: 'body'
                     }
-                }]
-            })
-        };
-    } else {
-        // 线上环境：使用代理
-        apiUrl = '/api/feishu-proxy';
-        requestOptions = {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                path: `/open-apis/docx/v1/documents/${docToken}/blocks/batch_update`,
-                requests: [{
-                    request_id: Date.now().toString(),
-                    request_type: 'INSERT',
-                    insert_payload: {
-                        element: {
-                            block_type: 'text',
-                            text: {
-                                style: {},
-                                elements: blocks
-                            }
-                        },
-                        location: {
-                            zone_id: 'body'
-                        }
-                    }
-                }],
-                _headers: {
-                    'Authorization': `Bearer ${accessToken}`
                 }
-            })
-        };
-    }
+            }]
+        })
+    };
     
     const response = await fetch(apiUrl, requestOptions);
     
