@@ -12,12 +12,32 @@ export default async function handler(req, res) {
         return;
     }
 
+    // 只允许POST方法
+    if (req.method !== 'POST') {
+        return res.status(405).json({ 
+            error: 'Method not allowed', 
+            allowedMethods: ['POST'] 
+        });
+    }
+
     try {
         // 从URL查询参数获取path
         const { path } = req.query;
         
+        console.log('🔍 Proxy Request Details:', {
+            method: req.method,
+            path: path,
+            query: req.query,
+            hasBody: !!req.body,
+            bodyKeys: req.body ? Object.keys(req.body) : []
+        });
+        
         if (!path) {
-            return res.status(400).json({ error: 'Missing path parameter' });
+            console.log('❌ Missing path parameter');
+            return res.status(400).json({ 
+                error: 'Missing path parameter',
+                received: req.query 
+            });
         }
 
         // 构建飞书API URL
@@ -26,38 +46,54 @@ export default async function handler(req, res) {
         // 准备请求头
         const requestHeaders = {
             'Content-Type': 'application/json',
-            'User-Agent': 'Boss-Knowledge-Base/1.0',
-            // 转发Authorization头
-            ...(req.headers.authorization && { 'Authorization': req.headers.authorization }),
-            ...(req.headers['x-lark-signature'] && { 'X-Lark-Signature': req.headers['x-lark-signature'] }),
-            ...(req.headers['x-lark-request-timestamp'] && { 'X-Lark-Request-Timestamp': req.headers['x-lark-request-timestamp'] }),
-            ...(req.headers['x-lark-request-nonce'] && { 'X-Lark-Request-Nonce': req.headers['x-lark-request-nonce'] })
+            'User-Agent': 'Boss-Knowledge-Base/1.0'
         };
+        
+        // 转发Authorization头
+        if (req.headers.authorization) {
+            requestHeaders['Authorization'] = req.headers.authorization;
+        }
         
         console.log('🚀 Feishu API Proxy Request:', {
             method: req.method,
             url: feishuUrl,
             headers: requestHeaders,
+            bodyType: typeof req.body,
             body: req.body
         });
 
         // 转发请求到飞书API
         const response = await fetch(feishuUrl, {
-            method: req.method,
+            method: 'POST',
             headers: requestHeaders,
-            body: req.method !== 'GET' ? JSON.stringify(req.body) : undefined
+            body: JSON.stringify(req.body)
         });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.log('❌ Feishu API Error Response:', {
+                status: response.status,
+                statusText: response.statusText,
+                error: errorText
+            });
+            return res.status(response.status).json({
+                error: 'Feishu API Error',
+                status: response.status,
+                message: errorText
+            });
+        }
 
         const responseData = await response.json();
         
         console.log('📥 Feishu API Response:', {
             status: response.status,
             statusText: response.statusText,
-            data: responseData
+            code: responseData.code,
+            msg: responseData.msg
         });
 
         // 返回飞书API的响应
-        res.status(response.status).json(responseData);
+        res.status(200).json(responseData);
         
     } catch (error) {
         console.error('❌ Feishu API Proxy Error:', error);
