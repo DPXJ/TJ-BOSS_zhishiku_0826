@@ -2814,16 +2814,26 @@ async function syncToFeishuTable(accessToken) {
 
 // 同步到飞书（文档或多维表格）
 async function syncToFeishu() {
+    console.log('🚀 syncToFeishu 函数开始执行');
+    console.log('📋 当前应用状态:', {
+        hasGeneratedContent: !!appState.generatedContent,
+        contentLength: appState.generatedContent ? appState.generatedContent.length : 0
+    });
+    
     if (!appState.generatedContent) {
+        console.log('❌ 没有可同步的内容');
         showToast('没有可同步的内容', 'warning');
         return;
     }
     
     // 检查飞书配置
+    console.log('🔍 检查飞书配置...');
     if (!checkFeishuConfig()) {
+        console.log('❌ 飞书配置检查失败');
         showToast('请先完成飞书配置：点击右下角设置按钮 → 飞书文档配置 → 填写App ID和App Secret → 保存', 'warning');
         return;
     }
+    console.log('✅ 飞书配置检查通过');
     
     try {
         const syncBtn = document.querySelector('.sync-btn');
@@ -2832,8 +2842,10 @@ async function syncToFeishu() {
             syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
         }
         
+        console.log('🔄 准备获取访问令牌...');
         // 获取访问令牌
         const accessToken = await getFeishuAccessToken();
+        console.log('✅ 访问令牌获取成功，准备同步...');
         let resultUrl;
         
         // 检查是否配置了多维表格参数
@@ -2910,33 +2922,79 @@ function updateWordCount(content) {
 
 // 飞书API相关函数
 async function getFeishuAccessToken() {
+    console.log('🚀 开始获取飞书访问令牌');
+    console.log('📝 当前飞书配置:', {
+        appId: API_CONFIG.FEISHU.appId ? `${API_CONFIG.FEISHU.appId.substring(0, 8)}...` : '未配置',
+        appSecret: API_CONFIG.FEISHU.appSecret ? `${API_CONFIG.FEISHU.appSecret.substring(0, 8)}...` : '未配置',
+        appToken: API_CONFIG.FEISHU.appToken ? `${API_CONFIG.FEISHU.appToken.substring(0, 8)}...` : '未配置',
+        tableId: API_CONFIG.FEISHU.tableId ? `${API_CONFIG.FEISHU.tableId.substring(0, 8)}...` : '未配置'
+    });
+    
+    // 验证配置
+    if (!API_CONFIG.FEISHU.appId || !API_CONFIG.FEISHU.appSecret) {
+        console.error('❌ 飞书配置不完整');
+        throw new Error('请先配置飞书App ID和App Secret');
+    }
+    
     // 飞书API直接调用，无需环境区分
     const apiUrl = 'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal';
+    const requestBody = {
+        app_id: API_CONFIG.FEISHU.appId,
+        app_secret: API_CONFIG.FEISHU.appSecret
+    };
     const requestOptions = {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-            app_id: API_CONFIG.FEISHU.appId,
-            app_secret: API_CONFIG.FEISHU.appSecret
-        })
+        body: JSON.stringify(requestBody)
     };
     
-    console.log('🔑 获取飞书访问令牌:', { apiUrl });
+    console.log('🔗 API请求信息:', { 
+        apiUrl, 
+        method: 'POST',
+        headers: requestOptions.headers,
+        bodyKeys: Object.keys(requestBody)
+    });
     
-    const response = await fetch(apiUrl, requestOptions);
-    
-    if (!response.ok) {
-        throw new Error(`获取访问令牌失败: ${response.status}`);
+    try {
+        const response = await fetch(apiUrl, requestOptions);
+        
+        console.log('📡 API响应状态:', {
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries())
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ HTTP请求失败:', { status: response.status, statusText: response.statusText, errorText });
+            throw new Error(`HTTP请求失败: ${response.status} - ${response.statusText}\n${errorText}`);
+        }
+        
+        const result = await response.json();
+        console.log('📋 API响应结果:', {
+            code: result.code,
+            msg: result.msg,
+            hasToken: !!result.tenant_access_token,
+            tokenLength: result.tenant_access_token ? result.tenant_access_token.length : 0
+        });
+        
+        if (result.code !== 0) {
+            console.error('❌ 飞书API返回错误:', result);
+            throw new Error(`飞书API错误: ${result.msg} (代码: ${result.code})`);
+        }
+        
+        console.log('✅ 访问令牌获取成功');
+        return result.tenant_access_token;
+        
+    } catch (error) {
+        console.error('❌ 获取访问令牌过程中发生错误:', error);
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            throw new Error('网络连接失败，请检查网络连接');
+        }
+        throw error;
     }
-    
-    const result = await response.json();
-    if (result.code !== 0) {
-        throw new Error(`获取访问令牌失败: ${result.msg}`);
-    }
-    
-    return result.tenant_access_token;
 }
 
 async function createFeishuDoc(accessToken, title, content) {
