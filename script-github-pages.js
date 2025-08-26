@@ -6,34 +6,29 @@
 const isLocalEnvironment = window.location.hostname === 'localhost' || 
                           window.location.hostname === '127.0.0.1';
 
-// GitHub Pages环境直接调用FastGPT API（会有CORS问题，需要用户在控制台手动关闭安全模式）
-const API_BASE = isLocalEnvironment ? 'http://localhost:3001/api/fastgpt' : 'https://api.fastgpt.in/api';
+// GitHub Pages环境使用Vercel代理解决CORS问题
+const API_BASE = isLocalEnvironment ? 'http://localhost:3001/api/fastgpt' : '/api/fastgpt-proxy';
 
 console.log('🌐 当前环境:', isLocalEnvironment ? '本地' : 'GitHub Pages');
 console.log('🌐 API_BASE:', API_BASE);
 
-// GitHub Pages环境的CORS解决方案提示
+// GitHub Pages环境状态提示
 if (!isLocalEnvironment) {
-    console.log('⚠️ GitHub Pages环境检测到！');
-    console.log('🔧 由于CORS限制，请按以下方式启用API功能：');
-    console.log('1. 按F12打开开发者工具');
-    console.log('2. 在控制台执行：enableGitHubPagesMode()');
-    console.log('3. 或者下载并在本地运行项目以获得完整功能');
+    console.log('🌐 GitHub Pages环境检测到！');
+    console.log('✅ 使用Vercel代理解决CORS问题，无需额外配置');
+    console.log('🔧 如遇到问题，可在控制台执行：enableGitHubPagesMode() 查看调试信息');
     
-    // 添加页面提示
+    // 添加成功状态提示
     setTimeout(() => {
         const alertDiv = document.createElement('div');
         alertDiv.innerHTML = `
             <div style="position: fixed; top: 10px; right: 10px; z-index: 9999; 
-                        background: #ff6b6b; color: white; padding: 15px; border-radius: 8px; 
+                        background: #27ae60; color: white; padding: 15px; border-radius: 8px; 
                         max-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
-                <h4 style="margin: 0 0 10px 0;">🌐 GitHub Pages模式</h4>
+                <h4 style="margin: 0 0 10px 0;">🌐 在线版本</h4>
                 <p style="margin: 0; font-size: 14px;">
-                    由于CORS限制，AI功能需要特殊设置。<br>
-                    请按F12打开控制台执行：<br>
-                    <code style="background: rgba(255,255,255,0.2); padding: 2px 4px; border-radius: 3px;">
-                        enableGitHubPagesMode()
-                    </code>
+                    ✅ 已使用Vercel代理解决CORS问题<br>
+                    🚀 所有功能已可正常使用
                 </p>
                 <button onclick="this.parentElement.remove()" 
                         style="position: absolute; top: 5px; right: 8px; 
@@ -42,7 +37,14 @@ if (!isLocalEnvironment) {
             </div>
         `;
         document.body.appendChild(alertDiv);
-    }, 2000);
+        
+        // 3秒后自动隐藏
+        setTimeout(() => {
+            if (alertDiv.parentElement) {
+                alertDiv.remove();
+            }
+        }, 3000);
+    }, 1000);
 }
 
 // API配置 - 用户配置信息
@@ -254,7 +256,9 @@ async function callStyleAnalysisWorkflow(fileUrls, userUrls) {
     }
     
     // 根据环境选择API地址
-    const apiUrl = `${API_CONFIG.FASTGPT_STYLE.baseUrl}/workflow/run`;
+    const apiUrl = isLocalEnvironment ? 
+        `${API_CONFIG.FASTGPT_STYLE.baseUrl}/workflow/run` : 
+        `${API_CONFIG.FASTGPT_STYLE.baseUrl}?path=/workflow/run`;
     console.log('🔗 调用工作流API地址:', apiUrl);
     
     const response = await fetch(apiUrl, {
@@ -317,7 +321,9 @@ async function callContentGenerationWorkflow(styleOutput, contentLength, topic, 
     };
     
     // 根据环境选择API地址
-    const apiUrl = `${API_CONFIG.FASTGPT_CONTENT.baseUrl}/v1/chat/completions`;
+    const apiUrl = isLocalEnvironment ? 
+        `${API_CONFIG.FASTGPT_CONTENT.baseUrl}/v1/chat/completions` : 
+        `${API_CONFIG.FASTGPT_CONTENT.baseUrl}?path=/v1/chat/completions`;
     console.log('🔗 调用内容生成工作流API地址:', apiUrl);
     
     const response = await fetch(apiUrl, {
@@ -701,7 +707,9 @@ async function callChatCompletionsRaw(messages, chatId, variables, apiKey, workf
     };
     
     // 根据环境选择API地址
-    const apiUrl = `${API_CONFIG.FASTGPT_STYLE.baseUrl}/v1/chat/completions`;
+    const apiUrl = isLocalEnvironment ? 
+        `${API_CONFIG.FASTGPT_STYLE.baseUrl}/v1/chat/completions` : 
+        `${API_CONFIG.FASTGPT_STYLE.baseUrl}?path=/v1/chat/completions`;
     console.log('🔗 调用对话API地址:', apiUrl);
     
     const response = await fetch(apiUrl, {
@@ -769,7 +777,9 @@ async function callChatCompletions(messages, chatId, variables, apiKey, workflow
     };
     
     // 根据环境选择API地址
-    const apiUrl = `${API_CONFIG.FASTGPT_STYLE.baseUrl}/v1/chat/completions`;
+    const apiUrl = isLocalEnvironment ? 
+        `${API_CONFIG.FASTGPT_STYLE.baseUrl}/v1/chat/completions` : 
+        `${API_CONFIG.FASTGPT_STYLE.baseUrl}?path=/v1/chat/completions`;
     console.log('🔗 调用对话API地址:', apiUrl);
     
     const response = await fetch(apiUrl, {
@@ -817,7 +827,9 @@ async function callContentGenerationChatCompletions(messages, chatId, variables,
     };
     
     // 根据环境选择API地址
-    const apiUrl = `${API_CONFIG.FASTGPT_CONTENT.baseUrl}/v1/chat/completions`;
+    const apiUrl = isLocalEnvironment ? 
+        `${API_CONFIG.FASTGPT_CONTENT.baseUrl}/v1/chat/completions` : 
+        `${API_CONFIG.FASTGPT_CONTENT.baseUrl}?path=/v1/chat/completions`;
     console.log('🔗 调用内容生成API地址:', apiUrl);
     
     const response = await fetch(apiUrl, {
