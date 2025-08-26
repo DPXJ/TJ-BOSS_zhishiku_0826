@@ -2174,4 +2174,10 @@ function saveConfigToStorage() {
 document.addEventListener('DOMContentLoaded', function() {
     // 延迟加载飞书配置，确保元素已存在
     setTimeout(loadFeishuConfig, 1000);
-}); 
+});
+
+// 全局暴露新增的功能函数（在函数定义之后）
+window.editGeneratedContent = editGeneratedContent;
+window.downloadGeneratedContent = downloadGeneratedContent;
+window.syncToFeishu = syncToFeishu;
+window.saveEditedContent = saveEditedContent; 
