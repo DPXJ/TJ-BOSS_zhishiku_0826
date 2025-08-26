@@ -2764,8 +2764,8 @@ async function syncToFeishuTable(accessToken) {
         recordData
     });
     
-    // 调用飞书多维表格API
-    const apiUrl = `https://open.feishu.cn/open-apis/bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`;
+    // 调用飞书多维表格API - 使用代理
+    const apiUrl = `http://localhost:3002/feishu-proxy/bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`;
     const requestOptions = {
         method: 'POST',
         headers: {
@@ -2924,10 +2924,13 @@ function updateWordCount(content) {
 async function getFeishuAccessToken() {
     console.log('🚀 开始获取飞书访问令牌');
     console.log('📝 当前飞书配置:', {
-        appId: API_CONFIG.FEISHU.appId ? `${API_CONFIG.FEISHU.appId.substring(0, 8)}...` : '未配置',
-        appSecret: API_CONFIG.FEISHU.appSecret ? `${API_CONFIG.FEISHU.appSecret.substring(0, 8)}...` : '未配置',
-        appToken: API_CONFIG.FEISHU.appToken ? `${API_CONFIG.FEISHU.appToken.substring(0, 8)}...` : '未配置',
-        tableId: API_CONFIG.FEISHU.tableId ? `${API_CONFIG.FEISHU.tableId.substring(0, 8)}...` : '未配置'
+        appId: API_CONFIG.FEISHU.appId || '未配置',
+        appSecret: API_CONFIG.FEISHU.appSecret || '未配置',
+        appToken: API_CONFIG.FEISHU.appToken || '未配置',
+        tableId: API_CONFIG.FEISHU.tableId || '未配置',
+        // 显示完整参数以便调试
+        appIdLength: API_CONFIG.FEISHU.appId ? API_CONFIG.FEISHU.appId.length : 0,
+        appSecretLength: API_CONFIG.FEISHU.appSecret ? API_CONFIG.FEISHU.appSecret.length : 0
     });
     
     // 验证配置
@@ -2936,8 +2939,8 @@ async function getFeishuAccessToken() {
         throw new Error('请先配置飞书App ID和App Secret');
     }
     
-    // 飞书API直接调用，无需环境区分
-    const apiUrl = 'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal';
+    // 本地环境使用代理服务器来避免CORS问题
+    const apiUrl = 'http://localhost:3002/feishu-proxy/auth/v3/tenant_access_token/internal';
     const requestBody = {
         app_id: API_CONFIG.FEISHU.appId,
         app_secret: API_CONFIG.FEISHU.appSecret
@@ -2998,8 +3001,8 @@ async function getFeishuAccessToken() {
 }
 
 async function createFeishuDoc(accessToken, title, content) {
-    // 飞书API直接调用创建文档
-    const apiUrl = 'https://open.feishu.cn/open-apis/docx/v1/documents';
+    // 飞书API通过代理调用创建文档
+    const apiUrl = 'http://localhost:3002/feishu-proxy/docx/v1/documents';
     const requestOptions = {
         method: 'POST',
         headers: {
@@ -3044,8 +3047,8 @@ async function updateFeishuDocContent(accessToken, docToken, content) {
     // 转换markdown为飞书文档格式
     const blocks = convertMarkdownToFeishuBlocks(content);
     
-    // 飞书API直接调用更新文档
-    const apiUrl = `https://open.feishu.cn/open-apis/docx/v1/documents/${docToken}/blocks/batch_update`;
+    // 飞书API通过代理调用更新文档
+    const apiUrl = `http://localhost:3002/feishu-proxy/docx/v1/documents/${docToken}/blocks/batch_update`;
     const requestOptions = {
         method: 'PATCH',
         headers: {
