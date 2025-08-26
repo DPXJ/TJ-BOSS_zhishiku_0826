@@ -23,6 +23,9 @@
   "functions": {
     "api/fastgpt-proxy.js": {
       "maxDuration": 30
+    },
+    "api/feishu-proxy.js": {
+      "maxDuration": 30
     }
   }
 } 
