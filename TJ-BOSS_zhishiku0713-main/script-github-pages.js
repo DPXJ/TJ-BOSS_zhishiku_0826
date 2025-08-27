@@ -10,7 +10,7 @@ const isLocalEnvironment = window.location.hostname === 'localhost' ||
 
 // 根据环境选择API基础地址
 // 本地环境使用代理服务器，其他环境直接调用FastGPT API
-const API_BASE = isLocalEnvironment ? 'http://localhost:3001/api/fastgpt' : '';
+const API_BASE = isLocalEnvironment ? 'http://localhost:3001/api/fastgpt' : 'https://api.fastgpt.in/api';
 
 console.log('🌐 当前环境:', isLocalEnvironment ? '本地' : 'GitHub Pages/Actions');
 console.log('🌐 API_BASE:', API_BASE);
@@ -27,15 +27,15 @@ let API_CONFIG = {
     },
     // FastGPT配置 - 风格分析
     FASTGPT_STYLE: {
-        baseUrl: isLocalEnvironment ? 'http://localhost:3001/api/fastgpt' : 'https://api.fastgpt.in/api', // 根据环境选择API地址
-        apiKey: 'fastgpt-uWWVnoPpJIc57h6BiLumhzeyk89gfyPmQCCYn8R214C71i6tL6Pa5Gsov7NnIYH', // 写死的风格分析密钥
-        workflowId: '685f87df49b71f158b57ae61' // 风格分析工作流ID（已修正）
+        baseUrl: API_BASE, // 使用统一的API基础地址
+        apiKey: 'fastgpt-uWWVnoPpJIc57h6BiLumhzeyk89gfyPmQCCYn8R214C71i6tL6Pa5Gsov7NnIYH', // 风格分析密钥
+        workflowId: '685f87df49b71f158b57ae61' // 风格分析工作流ID
     },
     // FastGPT配置 - 内容生成
     FASTGPT_CONTENT: {
-        baseUrl: isLocalEnvironment ? 'http://localhost:3001/api/fastgpt' : 'https://api.fastgpt.in/api', // 根据环境选择API地址
-        apiKey: 'fastgpt-p2WSK5LRZZM3tVzk0XRT4vERkQ2PYLXi6rFAZdHzzuB7mSicDLRBXiymej', // 写死的内容生成密钥
-        workflowId: '685c9d7e6adb97a0858caaa6' // 内容创作工作流ID（已修正）
+        baseUrl: API_BASE, // 使用统一的API基础地址
+        apiKey: 'fastgpt-p2WSK5LRZZM3tVzk0XRT4vERkQ2PYLXi6rFAZdHzzuB7mSicDLRBXiymej', // 内容生成密钥
+        workflowId: '685c9d7e6adb97a0858caaa6' // 内容创作工作流ID
     },
     // 接口模式选择：'workflow' 或 'chat'
     MODE: 'chat' // 固定使用对话接口模式
@@ -155,10 +155,13 @@ function checkLearningButtonStatus() {
         
         if (appState.isAnalyzing) {
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI学习中...';
+            button.classList.add('loading');
         } else if (appState.isGenerating) {
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 生成中...';
+            button.classList.add('loading');
         } else {
             button.innerHTML = '<i class="fas fa-brain"></i> 开始AI学习';
+            button.classList.remove('loading');
         }
     }
 }
@@ -335,17 +338,17 @@ function selectFiles() {
     const input = document.createElement('input');
     input.type = 'file';
     input.multiple = true;
-    input.accept = '.txt,.md,.doc,.docx,.pdf,.json,.csv,.xml,.html,.htm,.js,.css,.py,.java,.cpp,.c,.php,.rb,.go,.rs,.swift,.kt,.tsx,.ts,.jsx,.vue,.scss,.sass,.less,.styl,.yml,.yaml,.toml,.ini,.conf,.log,.sql,.sh,.bat,.ps1,.tex,.rtf,.odt,.ods,.odp,.epub,.mobi,.azw3';
+    input.accept = '.txt,.md,.doc,.docx,.pdf,.ppt,.pptx,.json,.csv,.xml,.html,.htm,.js,.css,.py,.java,.cpp,.c,.php,.rb,.go,.rs,.swift,.kt,.tsx,.ts,.jsx,.vue,.scss,.sass,.less,.styl,.yml,.yaml,.toml,.ini,.conf,.log,.sql,.sh,.bat,.ps1,.tex,.rtf,.odt,.ods,.odp,.epub,.mobi,.azw3,.xls,.xlsx,.zip,.rar,.7z';
     
     input.onchange = async function(event) {
         const files = Array.from(event.target.files);
         if (files.length === 0) return;
         
         // 检查文件大小
-        const maxSize = 10 * 1024 * 1024; // 10MB
+        const maxSize = 100 * 1024 * 1024; // 100MB
         const oversizedFiles = files.filter(file => file.size > maxSize);
         if (oversizedFiles.length > 0) {
-            showToast(`文件过大：${oversizedFiles.map(f => f.name).join(', ')}（限制10MB）`, 'error');
+            showToast(`文件过大：${oversizedFiles.map(f => f.name).join(', ')}（限制100MB）`, 'error');
             return;
         }
         
@@ -1563,14 +1566,59 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     console.log('✅ 页面初始化完成');
     
-    // 示例链接复制功能
-    const copyTestUrlLink = document.getElementById('copy-test-url-link');
-    if (copyTestUrlLink) {
-        copyTestUrlLink.addEventListener('click', function() {
-            const text = 'https://www.woshipm.com/it/6234959.html';
-            navigator.clipboard.writeText(text).then(() => {
+    // 示例链接复制功能 - 使用事件委托
+    document.addEventListener('click', function(e) {
+        console.log('点击事件触发，目标元素:', e.target);
+        console.log('目标元素ID:', e.target.id);
+        
+        if (e.target && e.target.id === 'copy-test-url-link') {
+            e.preventDefault();
+            console.log('复制链接被点击');
+            
+            const text = 'https://www.takungpao.com/consume/jiushui/2025/0603/1092252.html';
+            
+            // 尝试使用现代clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    console.log('复制成功');
+                    showToast('已复制到剪贴板', 'success');
+                }).catch((err) => {
+                    console.log('clipboard API失败，使用备用方法:', err);
+                    // 使用备用方法
+                    copyToClipboardFallback(text);
+                });
+            } else {
+                console.log('clipboard API不可用，使用备用方法');
+                copyToClipboardFallback(text);
+            }
+        }
+    });
+    
+    // 备用复制方法
+    function copyToClipboardFallback(text) {
+        try {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            if (successful) {
+                console.log('备用复制方法成功');
                 showToast('已复制到剪贴板', 'success');
-            });
-        });
+            } else {
+                console.log('备用复制方法失败');
+                showToast('复制失败，请手动复制', 'error');
+            }
+        } catch (err) {
+            console.log('复制出错:', err);
+            showToast('复制失败，请手动复制', 'error');
+        }
     }
 }); 

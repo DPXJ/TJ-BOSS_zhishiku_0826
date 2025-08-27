@@ -68,7 +68,7 @@
                             <i class="fas fa-link"></i>
                             添加参考链接
                         </h3>
-                        <a href="javascript:void(0);" class="copy-test-url-link" id="copy-test-url-link" style="position:absolute;top:10px;right:10px; font-size:10px; color:#999; text-decoration:none; cursor:pointer;">示例（点击复制）：镜哥产品文章</a>
+                        <a href="javascript:void(0);" class="copy-test-url-link" id="copy-test-url-link" onclick="copyTestUrl()" style="position:absolute;top:10px;right:10px; font-size:12px; color:#27ae60; text-decoration:none; cursor:pointer; z-index:10; padding:5px; background:rgba(39,174,96,0.1); border-radius:3px;">示例（点击复制）：某新闻文章</a>
                         <div class="url-inputs" id="url-inputs">
                             <!-- 添加的URL将在这里显示 -->
                         </div>
@@ -127,7 +127,7 @@
                     </div>
                     <div class="form-group">
                         <label for="notes">补充说明</label>
-                        <textarea id="notes" class="form-textarea" placeholder="请输入补充说明，如特殊要求、重点内容、语调偏好等"></textarea>
+                        <textarea id="notes" class="form-textarea" placeholder="请输入补充说明，如特殊要求、重点内容、语调偏好等" rows="5"></textarea>
                     </div>
                 </div>
             </div>
@@ -226,93 +226,198 @@
     <div class="privacy-modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h3><i class="fas fa-shield-alt"></i> 配置信息</h3>
+                <h3><i class="fas fa-comments"></i> 飞书配置</h3>
                 <button class="close-modal-btn" onclick="closePrivacyModal()"><i class="fas fa-times"></i></button>
             </div>
-            <div class="modal-body">
-                <!-- 参考文章URL链接 -->
-                <div class="info-section">
-                    <h4>参考文章URL链接</h4>
-                    <div class="info-item">
-                        <span class="info-text">https://www.takungpao.com/house/dichan/2025/0604/1092529.html</span>
-                        <button class="copy-btn" data-text="https://www.takungpao.com/house/dichan/2025/0604/1092529.html">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-text">https://www.takungpao.com/tech/internet/2025/0623/1097834.html</span>
-                        <button class="copy-btn" data-text="https://www.takungpao.com/tech/internet/2025/0623/1097834.html">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-text">https://www.takungpao.com/tech/internet/2025/0619/1096801.html</span>
-                        <button class="copy-btn" data-text="https://www.takungpao.com/tech/internet/2025/0619/1096801.html">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="divider"></div>
-
-                <!-- FastGPT配置部分 -->
+                        <div class="modal-body">
+                <!-- 飞书配置部分 -->
                 <div style="margin-bottom: 30px;">
                   <h4 style="color: #333; margin-bottom: 20px; font-size: 1.1rem; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px;">
-                    ⚙️ FastGPT配置
+                    📋 飞书文档配置
                   </h4>
-                  <!-- API密钥已写死在代码中，无需输入 -->
-                  <div style="margin-bottom: 20px; padding: 15px; background-color: #e8f5e8; border-radius: 8px; border-left: 4px solid #28a745;">
-                    <p style="margin: 0; color: #155724; font-size: 0.9rem;">
-                      <i class="fas fa-check-circle" style="margin-right: 8px;"></i>
-                      <strong>API密钥已配置：</strong>风格分析和内容生成的API密钥已写死在代码中，无需手动输入。
+                  <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+                    <div>
+                      <label style="font-weight: 600; margin-bottom: 8px; color: #333; display: block;">飞书App ID</label>
+                      <input type="text" id="feishu-app-id" style="
+                        padding: 12px 15px;
+                        border: 2px solid #e9ecef;
+                        border-radius: 8px;
+                        font-size: 1rem;
+                        width: 100%;
+                        box-sizing: border-box;" placeholder="请输入飞书应用ID">
+                    </div>
+                    <div>
+                      <label style="font-weight: 600; margin-bottom: 8px; color: #333; display: block;">飞书App Secret</label>
+                      <input type="password" id="feishu-app-secret" style="
+                        padding: 12px 15px;
+                        border: 2px solid #e9ecef;
+                        border-radius: 8px;
+                        font-size: 1rem;
+                        width: 100%;
+                        box-sizing: border-box;" placeholder="请输入飞书应用密钥">
+                    </div>
+                    <div>
+                      <label style="font-weight: 600; margin-bottom: 8px; color: #333; display: block;">飞书文档Token (可选)</label>
+                      <input type="text" id="feishu-doc-token" style="
+                        padding: 12px 15px;
+                        border: 2px solid #e9ecef;
+                        border-radius: 8px;
+                        font-size: 1rem;
+                        width: 100%;
+                        box-sizing: border-box;" placeholder="文档Token，留空则创建新文档">
+                    </div>
+                    
+                    <!-- 多维表格配置字段 -->
+                    <div style="margin-top: 15px; padding: 15px; background-color: #e8f5e8; border-radius: 8px; border-left: 4px solid #28a745;">
+                      <h4 style="margin: 0 0 15px 0; color: #155724; font-size: 1rem;">
+                        <i class="fas fa-table" style="margin-right: 8px;"></i>
+                        多维表格配置
+                      </h4>
+                      
+                      <div style="display: grid; gap: 15px;">
+                        <div>
+                          <label style="font-weight: 600; margin-bottom: 8px; color: #155724; display: block;">表格App Token</label>
+                          <input type="text" id="feishu-app-token" style="
+                            padding: 12px 15px;
+                            border: 2px solid #c3e6cb;
+                            border-radius: 8px;
+                            font-size: 1rem;
+                            width: 100%;
+                            box-sizing: border-box;" placeholder="从表格链接中获取，/base/后的字符串">
+                        </div>
+                        
+                        <div>
+                          <label style="font-weight: 600; margin-bottom: 8px; color: #155724; display: block;">Table ID</label>
+                          <input type="text" id="feishu-table-id" style="
+                            padding: 12px 15px;
+                            border: 2px solid #c3e6cb;
+                            border-radius: 8px;
+                            font-size: 1rem;
+                            width: 100%;
+                            box-sizing: border-box;" placeholder="从表格链接中获取，?table=后的字符串">
+                        </div>
+                      </div>
+                      
+                      <div style="margin-top: 12px; padding: 10px; background-color: #d1ecf1; border-radius: 6px; border: 1px solid #bee5eb;">
+                        <small style="color: #0c5460; font-size: 0.85rem;">
+                          <strong>💡 获取方法：</strong><br>
+                          1. 打开飞书多维表格，点击"分享" → "复制链接"<br>
+                          2. 链接格式：https://xxx.feishu.cn/base/<strong>AppToken</strong>?table=<strong>TableID</strong><br>
+                          3. 分别复制对应部分到上方输入框
+                        </small>
+                      </div>
+                    </div>
+                    
+                    <!-- 多维表格配置说明 -->
+                    <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; border-left: 4px solid #28a745;">
+                      <h4 style="margin: 0 0 12px 0; color: #155724; font-size: 1rem;">
+                        <i class="fas fa-table" style="margin-right: 8px;"></i>
+                        多维表格字段设置指南
+                      </h4>
+                      
+                      <div style="font-size: 0.9rem; color: #155724; line-height: 1.5;">
+                        <p style="margin: 0 0 12px 0; font-weight: 600;">建议的表格字段结构：</p>
+                        
+                        <div style="background: white; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
+                          <strong>基础字段（必需）：</strong>
+                          <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+                            <li><strong>标题</strong> - 单行文本（主题内容）</li>
+                            <li><strong>内容</strong> - 多行文本（生成的完整内容）</li>
+                            <li><strong>字数</strong> - 数字（内容字数统计）</li>
+                            <li><strong>创建时间</strong> - 创建时间（自动填充）</li>
+                          </ul>
+                        </div>
+                        
+                        <div style="background: white; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
+                          <strong>扩展字段（可选）：</strong>
+                          <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+                            <li><strong>风格类型</strong> - 单选（正式严谨、生动活泼等）</li>
+                            <li><strong>补充说明</strong> - 多行文本（用户备注）</li>
+                            <li><strong>状态</strong> - 单选（草稿、已审核、已发布）</li>
+                            <li><strong>标签</strong> - 多选（内容分类）</li>
+                            <li><strong>评分</strong> - 评分（内容质量评分）</li>
+                          </ul>
+                        </div>
+                        
+                        <div style="background: #fff3cd; padding: 10px; border-radius: 4px; border: 1px solid #ffeaa7;">
+                          <strong>📋 设置步骤：</strong>
+                          <ol style="margin: 8px 0 0 0; padding-left: 20px; font-size: 0.85rem;">
+                            <li>在飞书中创建多维表格</li>
+                            <li>按上述建议添加字段</li>
+                            <li>复制表格链接获取App Token（/base/后的字符串）</li>
+                            <li>获取Table ID（/tbl后的字符串）</li>
+                            <li>在上方填入App ID、App Secret</li>
+                            <li>保存配置即可使用</li>
+                          </ol>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="margin-top: 15px; padding: 12px; background-color: #e3f2fd; border-radius: 6px; border-left: 4px solid #2196f3;">
+                    <p style="margin: 0 0 10px 0; color: #0d47a1; font-size: 0.9rem;">
+                      <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
+                      <strong>飞书应用配置步骤：</strong>
                     </p>
+                    <ol style="margin: 0; padding-left: 20px; color: #0d47a1; font-size: 0.85rem;">
+                      <li>访问 <a href="https://open.feishu.cn/" target="_blank" style="color: #1976d2;">飞书开放平台</a></li>
+                      <li>创建自建应用 → 获取 App ID 和 App Secret</li>
+                      <li>在"权限管理"中申请以下权限：
+                        <ul style="margin: 5px 0; padding-left: 15px;">
+                          <li><strong>docx:document</strong> （文档功能：查看、编辑、创建新版文档）</li>
+                          <li><strong>docx:document:readonly</strong> （文档功能：读取文档内容）</li>
+                          <li><strong>bitable:app</strong> （表格功能：多维表格应用权限）</li>
+                          <li><strong>bitable:app:readonly</strong> （表格功能：读取表格权限）</li>
+                          <li><strong>drive:drive</strong> （可选：如需访问云空间文件夹）</li>
+                        </ul>
+                        <div style="margin-top: 8px; padding: 8px; background: rgba(255, 193, 7, 0.1); border-radius: 4px; border-left: 3px solid #ffc107;">
+                          <small style="color: #856404;"><strong>权限字段说明：</strong><br>
+                          • 在飞书开放平台的权限管理页面<br>
+                          • 搜索上述权限名称并申请<br>
+                          • 权限申请后需要发布应用才能生效</small>
+                        </div>
+                      </li>
+                      <li>应用发布后，将 App ID 和 App Secret 填入上方配置框</li>
+                      <li><strong style="color: #d32f2f;">配置完成后，请点击下方保存按钮</strong></li>
+                      <li>首次同步会自动创建文档，后续同步会更新同一文档</li>
+                    </ol>
+                    
+                    <!-- 多维表格说明 -->
+                    <div style="margin-top: 15px; padding: 12px; background-color: #fff3cd; border-radius: 6px; border-left: 4px solid #ffc107;">
+                      <p style="margin: 0 0 8px 0; color: #856404; font-size: 0.9rem;">
+                        <i class="fas fa-table" style="margin-right: 8px;"></i>
+                        <strong>关于多维表格：</strong>
+                      </p>
+                      <div style="font-size: 0.85rem; color: #856404; line-height: 1.4;">
+                        <p style="margin: 0 0 8px 0;">
+                          当前版本同步到<strong>飞书文档</strong>，如需同步到多维表格，可选择以下方案：
+                        </p>
+                        <ol style="margin: 0; padding-left: 20px;">
+                          <li>手动复制生成内容到多维表格</li>
+                          <li>在飞书文档中通过"插入→表格"转换为表格格式</li>
+                          <li>使用飞书API直接调用（需要本地环境或支持服务端的部署平台）</li>
+                        </ol>
+                      </div>
+                    </div>
                   </div>
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                    <div>
-                      <label style="font-weight: 600; margin-bottom: 8px; color: #333; display: block;">风格分析工作流ID</label>
-                      <input type="text" id="style-workflow-id-dynamic" style="
-                        padding: 12px 15px;
-                        border: 2px solid #e9ecef;
-                        border-radius: 8px;
-                        font-size: 1rem;
-                        width: 100%;
-                        box-sizing: border-box;" placeholder="风格分析工作流ID">
-                    </div>
-                    <div>
-                      <label style="font-weight: 600; margin-bottom: 8px; color: #333; display: block;">内容生成工作流ID</label>
-                      <input type="text" id="content-workflow-id-dynamic" style="
-                        padding: 12px 15px;
-                        border: 2px solid #e9ecef;
-                        border-radius: 8px;
-                        font-size: 1rem;
-                        width: 100%;
-                        box-sizing: border-box;" placeholder="内容生成工作流ID">
-                    </div>
+                  <!-- 飞书配置保存按钮 -->
+                  <div style="margin-top: 20px; text-align: center;">
+                    <button onclick="saveFeishuConfig()" style="
+                      padding: 12px 24px;
+                      background: #2196f3;
+                      color: white;
+                      border: none;
+                      border-radius: 6px;
+                      font-size: 1rem;
+                      font-weight: 600;
+                      cursor: pointer;
+                      transition: background 0.3s;
+                    " onmouseover="this.style.background='#1976d2'" onmouseout="this.style.background='#2196f3'">
+                      <i class="fas fa-save" style="margin-right: 8px;"></i>
+                      保存飞书配置
+                    </button>
                   </div>
-                </div>
-
-                <div class="divider"></div>
-
-                <!-- 阿里云OSS配置 -->
-                <div class="info-section">
-                    <h4>阿里云OSS配置</h4>
-                    <div class="info-item">
-                        <span class="info-label">KEY：</span>
-                        <span class="info-text">**************</span>
-                        <button class="copy-btn" data-text="**************">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">ID：</span>
-                        <span class="info-text">**************</span>
-                        <button class="copy-btn" data-text="**************">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                    </div>
                 </div>
             </div>
-        </div>
     </div>
 
     <!-- 替换主脚本为GitHub Pages专用版本，支持Vercel代理API -->

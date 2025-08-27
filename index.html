@@ -68,7 +68,7 @@
                             <i class="fas fa-link"></i>
                             添加参考链接
                         </h3>
-                        <a href="javascript:void(0);" class="copy-test-url-link" id="copy-test-url-link" style="position:absolute;top:10px;right:10px; font-size:10px; color:#999; text-decoration:none; cursor:pointer;">示例（点击复制）：镜哥产品文章</a>
+                        <a href="javascript:void(0);" class="copy-test-url-link" id="copy-test-url-link" onclick="copyTestUrl()" style="position:absolute;top:10px;right:10px; font-size:12px; color:#27ae60; text-decoration:none; cursor:pointer; z-index:10; padding:5px; background:rgba(39,174,96,0.1); border-radius:3px;">示例（点击复制）：某新闻文章</a>
                         <div class="url-inputs" id="url-inputs">
                             <!-- 添加的URL将在这里显示 -->
                         </div>
@@ -138,7 +138,7 @@
                     </div>
                     <div class="form-group full-width">
                         <label for="notes">补充说明</label>
-                        <textarea id="notes" class="form-textarea" placeholder="请输入补充说明，如特殊要求、重点内容、语调偏好等" rows="3"></textarea>
+                        <textarea id="notes" class="form-textarea" placeholder="请输入补充说明，如特殊要求、重点内容、语调偏好等" rows="5"></textarea>
                     </div>
                 </div>
             </div>
@@ -237,72 +237,10 @@
     <div class="privacy-modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h3><i class="fas fa-shield-alt"></i> 配置信息</h3>
+                <h3><i class="fas fa-comments"></i> 飞书配置</h3>
                 <button class="close-modal-btn" onclick="closePrivacyModal()"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body">
-                <!-- 参考文章URL链接 -->
-                <div class="info-section">
-                    <h4>参考文章URL链接</h4>
-                    <div class="info-item">
-                        <span class="info-text">https://www.takungpao.com/house/dichan/2025/0604/1092529.html</span>
-                        <button class="copy-btn" data-text="https://www.takungpao.com/house/dichan/2025/0604/1092529.html">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-text">https://www.takungpao.com/tech/internet/2025/0623/1097834.html</span>
-                        <button class="copy-btn" data-text="https://www.takungpao.com/tech/internet/2025/0623/1097834.html">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-text">https://www.takungpao.com/tech/internet/2025/0619/1096801.html</span>
-                        <button class="copy-btn" data-text="https://www.takungpao.com/tech/internet/2025/0619/1096801.html">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="divider"></div>
-
-                <!-- FastGPT配置部分 -->
-                <div style="margin-bottom: 30px;">
-                  <h4 style="color: #333; margin-bottom: 20px; font-size: 1.1rem; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px;">
-                    ⚙️ FastGPT配置
-                  </h4>
-                  <!-- API密钥已写死在代码中，无需输入 -->
-                  <div style="margin-bottom: 20px; padding: 15px; background-color: #e8f5e8; border-radius: 8px; border-left: 4px solid #28a745;">
-                    <p style="margin: 0; color: #155724; font-size: 0.9rem;">
-                      <i class="fas fa-check-circle" style="margin-right: 8px;"></i>
-                      <strong>API密钥已配置：</strong>风格分析和内容生成的API密钥已写死在代码中，无需手动输入。
-                    </p>
-                  </div>
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                    <div>
-                      <label style="font-weight: 600; margin-bottom: 8px; color: #333; display: block;">风格分析工作流ID</label>
-                      <input type="text" id="style-workflow-id-dynamic" style="
-                        padding: 12px 15px;
-                        border: 2px solid #e9ecef;
-                        border-radius: 8px;
-                        font-size: 1rem;
-                        width: 100%;
-                        box-sizing: border-box;" placeholder="风格分析工作流ID">
-                    </div>
-                    <div>
-                      <label style="font-weight: 600; margin-bottom: 8px; color: #333; display: block;">内容生成工作流ID</label>
-                      <input type="text" id="content-workflow-id-dynamic" style="
-                        padding: 12px 15px;
-                        border: 2px solid #e9ecef;
-                        border-radius: 8px;
-                        font-size: 1rem;
-                        width: 100%;
-                        box-sizing: border-box;" placeholder="内容生成工作流ID">
-                    </div>
-                  </div>
-                </div>
-
-                <div class="divider"></div>
 
                 <!-- 飞书配置部分 -->
                 <div style="margin-bottom: 30px;">
@@ -492,26 +430,7 @@
                   </div>
                 </div>
 
-                <div class="divider"></div>
 
-                <!-- 阿里云OSS配置 -->
-                <div class="info-section">
-                    <h4>阿里云OSS配置</h4>
-                    <div class="info-item">
-                        <span class="info-label">KEY：</span>
-                        <span class="info-text">**************</span>
-                        <button class="copy-btn" data-text="**************">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">ID：</span>
-                        <span class="info-text">**************</span>
-                        <button class="copy-btn" data-text="**************">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                    </div>
-                </div>
             </div>
         </div>
     </div>

@@ -14,7 +14,7 @@ const API_BASE = isLocalEnv ? 'http://localhost:3001/api/fastgpt' : 'https://api
 
 // Vercel API基础地址 - 如果你部署了Vercel，请替换为你的实际域名
 // 临时使用cors-anywhere作为备用方案
-const VERCEL_API_BASE = 'https://your-app-name.vercel.app';
+const VERCEL_API_BASE = 'https://boss-zhishiku-vercel.vercel.app';
 const CORS_FALLBACK = 'https://cors-anywhere.herokuapp.com/https://open.feishu.cn/open-apis';
 
 console.log('🌐 当前环境:', isLocalEnv ? '本地' : 'GitHub Pages');
@@ -48,14 +48,14 @@ let API_CONFIG = {
     // FastGPT配置 - 风格分析
     FASTGPT_STYLE: {
         baseUrl: API_BASE, // 使用统一的API基础地址
-        apiKey: 'fastgpt-uWWVnoPpJIc57h6BiLumhzeyk89gfyPmQCCYn8R214C71i6tL6Pa5Gsov7NnIYH', // 写死的风格分析密钥
-        workflowId: '685f87df49b71f158b57ae61' // 风格分析工作流ID（已修正）
+        apiKey: 'fastgpt-uWWVnoPpJIc57h6BiLumhzeyk89gfyPmQCCYn8R214C71i6tL6Pa5Gsov7NnIYH', // 风格分析密钥
+        workflowId: '685f87df49b71f158b57ae61' // 风格分析工作流ID
     },
     // FastGPT配置 - 内容生成
     FASTGPT_CONTENT: {
         baseUrl: API_BASE, // 使用统一的API基础地址
-        apiKey: 'fastgpt-p2WSK5LRZZM3tVzk0XRT4vERkQ2PYLXi6rFAZdHzzuB7mSicDLRBXiymej', // 写死的内容生成密钥
-        workflowId: '685c9d7e6adb97a0858caaa6' // 内容创作工作流ID（已修正）
+        apiKey: 'fastgpt-p2WSK5LRZZM3tVzk0XRT4vERkQ2PYLXi6rFAZdHzzuB7mSicDLRBXiymej', // 内容生成密钥
+        workflowId: '685c9d7e6adb97a0858caaa6' // 内容创作工作流ID
     },
     // 飞书配置
     FEISHU: {
@@ -183,10 +183,13 @@ function checkLearningButtonStatus() {
         
         if (appState.isAnalyzing) {
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI学习中...';
+            button.classList.add('loading');
         } else if (appState.isGenerating) {
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 生成中...';
+            button.classList.add('loading');
         } else {
             button.innerHTML = '<i class="fas fa-brain"></i> 开始AI学习';
+            button.classList.remove('loading');
         }
     }
 }
@@ -363,27 +366,40 @@ function selectFiles() {
     const input = document.createElement('input');
     input.type = 'file';
     input.multiple = true;
-    input.accept = '.txt,.md,.doc,.docx,.pdf,.json,.csv,.xml,.html,.htm,.js,.css,.py,.java,.cpp,.c,.php,.rb,.go,.rs,.swift,.kt,.tsx,.ts,.jsx,.vue,.scss,.sass,.less,.styl,.yml,.yaml,.toml,.ini,.conf,.log,.sql,.sh,.bat,.ps1,.tex,.rtf,.odt,.ods,.odp,.epub,.mobi,.azw3';
+    input.accept = '.txt,.md,.doc,.docx,.pdf,.ppt,.pptx,.json,.csv,.xml,.html,.htm,.js,.css,.py,.java,.cpp,.c,.php,.rb,.go,.rs,.swift,.kt,.tsx,.ts,.jsx,.vue,.scss,.sass,.less,.styl,.yml,.yaml,.toml,.ini,.conf,.log,.sql,.sh,.bat,.ps1,.tex,.rtf,.odt,.ods,.odp,.epub,.mobi,.azw3,.xls,.xlsx,.zip,.rar,.7z';
     
     input.onchange = async function(event) {
         const files = Array.from(event.target.files);
         if (files.length === 0) return;
         
         // 检查文件大小
-        const maxSize = 10 * 1024 * 1024; // 10MB
+        const maxSize = 100 * 1024 * 1024; // 100MB
         const oversizedFiles = files.filter(file => file.size > maxSize);
         if (oversizedFiles.length > 0) {
-            showToast(`文件过大：${oversizedFiles.map(f => f.name).join(', ')}（限制10MB）`, 'error');
+            showToast(`文件过大：${oversizedFiles.map(f => f.name).join(', ')}（限制100MB）`, 'error');
             return;
         }
         
         // 显示上传状态
         appState.isUploading = true;
-        updateUploadStatus('正在上传文件...');
+        
+        // 显示进度条
+        showProgressBar('file-upload', '文件上传', `正在上传 ${files.length} 个文件...`);
+        updateProgress(10);
         
         try {
+            // 更新进度状态
+            updateProgressStatus(`正在准备上传 ${files.length} 个文件...`);
+            updateProgress(20);
+            
             // 上传文件到OSS
+            updateProgressStatus('正在上传文件到OSS...');
+            updateProgress(40);
             const fileUrls = await uploadFilesToOSS(files);
+            
+            // 更新进度
+            updateProgressStatus('正在处理上传结果...');
+            updateProgress(70);
             
             // 上传成功后处理
             files.forEach((file, index) => {
@@ -401,6 +417,15 @@ function selectFiles() {
             
             // 更新文件URL数组
             appState.fileUrls.push(...fileUrls);
+            
+            // 完成进度
+            updateProgressStatus('文件上传完成！');
+            updateProgress(100);
+            
+            // 延迟隐藏进度条
+            setTimeout(() => {
+                hideProgressBar();
+            }, 1000);
             
             // 添加调试日志
             console.log('🔍 [调试] 文件上传成功后的状态:');
@@ -425,6 +450,15 @@ function selectFiles() {
         } catch (error) {
             console.error('文件上传失败:', error);
             
+            // 更新错误进度
+            updateProgressStatus('文件上传失败！');
+            updateProgress(100);
+            
+            // 延迟隐藏进度条
+            setTimeout(() => {
+                hideProgressBar();
+            }, 2000);
+            
             // 显示详细错误信息
             let errorMsg = '文件上传失败: ';
             if (error.message.includes('OSS签名验证失败')) {
@@ -442,7 +476,6 @@ function selectFiles() {
             showToast(errorMsg, 'error');
         } finally {
             appState.isUploading = false;
-            updateUploadStatus('');
         }
     };
     
@@ -925,6 +958,10 @@ async function generateContent() {
         
         appState.generatedContent = generatedContent;
         showGeneratedContent(generatedContent);
+        
+        // 立即更新字数统计
+        updateWordCount(generatedContent);
+        
         showToast('内容生成完成', 'success');
         updateAnalysisStatus('内容生成完成');
     } catch (error) {
@@ -1578,15 +1615,60 @@ document.addEventListener('DOMContentLoaded', async function() {
         loadFeishuConfig();
     }, 100);
     
-    // 示例链接复制功能
-    const copyTestUrlLink = document.getElementById('copy-test-url-link');
-    if (copyTestUrlLink) {
-        copyTestUrlLink.addEventListener('click', function() {
-            const text = 'https://www.woshipm.com/it/6234959.html';
-            navigator.clipboard.writeText(text).then(() => {
+    // 示例链接复制功能 - 使用事件委托
+    document.addEventListener('click', function(e) {
+        console.log('点击事件触发，目标元素:', e.target);
+        console.log('目标元素ID:', e.target.id);
+        
+        if (e.target && e.target.id === 'copy-test-url-link') {
+            e.preventDefault();
+            console.log('复制链接被点击');
+            
+            const text = 'https://www.takungpao.com/consume/jiushui/2025/0603/1092252.html';
+            
+            // 尝试使用现代clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    console.log('复制成功');
+                    showToast('已复制到剪贴板', 'success');
+                }).catch((err) => {
+                    console.log('clipboard API失败，使用备用方法:', err);
+                    // 使用备用方法
+                    copyToClipboardFallback(text);
+                });
+            } else {
+                console.log('clipboard API不可用，使用备用方法');
+                copyToClipboardFallback(text);
+            }
+        }
+    });
+    
+    // 备用复制方法
+    function copyToClipboardFallback(text) {
+        try {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            if (successful) {
+                console.log('备用复制方法成功');
                 showToast('已复制到剪贴板', 'success');
-            });
-        });
+            } else {
+                console.log('备用复制方法失败');
+                showToast('复制失败，请手动复制', 'error');
+            }
+        } catch (err) {
+            console.log('复制出错:', err);
+            showToast('复制失败，请手动复制', 'error');
+        }
     }
 });
 
@@ -1984,14 +2066,15 @@ async function syncToFeishuTable(accessToken) {
     // 获取数据
     const title = topicEl ? topicEl.value.trim() || '生成内容' : '生成内容';
     const content = appState.generatedContent;
-    const wordCount = wordCountEl ? parseInt(wordCountEl.value) || content.length : content.length;
+    // 使用实际生成内容的字数，而不是输入框中的字数
+    const actualWordCount = content ? content.length : 0;
     const notes = notesEl ? notesEl.value.trim() || '' : '';
     const currentTime = new Date().toLocaleString('zh-CN');
     
     console.log('📊 待同步数据:', {
         title,
         contentLength: content.length,
-        wordCount,
+        actualWordCount,
         notes
     });
     
@@ -2041,17 +2124,17 @@ async function syncToFeishuTable(accessToken) {
         }
     }
     
-    if (wordCount) {
+    if (actualWordCount) {
         const countField = fieldMapping.wordCount.find(name => existingFieldNames.includes(name));
         if (countField) {
-            recordData.fields[countField] = wordCount;
-            console.log(`✅ 字数字段匹配: ${countField} = ${wordCount}`);
+            recordData.fields[countField] = actualWordCount;
+            console.log(`✅ 字数字段匹配: ${countField} = ${actualWordCount}`);
         } else {
             // 使用数字字段
             const numberField = fields.find(f => f.type === 3); // 3是数字类型
             if (numberField) {
-                recordData.fields[numberField.field_name] = wordCount;
-                console.log(`📝 使用数字字段: ${numberField.field_name} = ${wordCount}`);
+                recordData.fields[numberField.field_name] = actualWordCount;
+                console.log(`📝 使用数字字段: ${numberField.field_name} = ${actualWordCount}`);
             }
         }
     }
@@ -2625,3 +2708,69 @@ window.syncToFeishu = syncToFeishu;
 window.saveEditedContent = saveEditedContent;
 window.saveFeishuConfig = saveFeishuConfig;
 window.checkFeishuConfig = checkFeishuConfig; 
+
+// 进度条相关函数
+function showProgressBar(type, title, status) {
+    // 创建或获取进度条容器
+    let progressContainer = document.getElementById('progress-container');
+    if (!progressContainer) {
+        progressContainer = document.createElement('div');
+        progressContainer.id = 'progress-container';
+        progressContainer.className = 'progress-container';
+        progressContainer.innerHTML = `
+            <div class="progress-header">
+                <div class="progress-title">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span id="progress-title">${title}</span>
+                </div>
+                <div class="progress-percentage" id="progress-percentage">0%</div>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <div class="progress-status" id="progress-status">${status}</div>
+        `;
+        
+        // 插入到页面中
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) {
+            mainContent.insertBefore(progressContainer, mainContent.firstChild);
+        }
+    }
+    
+    // 显示进度条
+    progressContainer.classList.add('active');
+    document.getElementById('progress-title').textContent = title;
+    document.getElementById('progress-status').textContent = status;
+    document.getElementById('progress-percentage').textContent = '0%';
+    document.getElementById('progress-bar').style.width = '0%';
+}
+
+function updateProgress(percentage) {
+    const progressBar = document.getElementById('progress-bar');
+    const progressPercentage = document.getElementById('progress-percentage');
+    
+    if (progressBar && progressPercentage) {
+        progressBar.style.width = percentage + '%';
+        progressPercentage.textContent = percentage + '%';
+    }
+}
+
+function updateProgressStatus(status) {
+    const progressStatus = document.getElementById('progress-status');
+    if (progressStatus) {
+        progressStatus.textContent = status;
+    }
+}
+
+function hideProgressBar() {
+    const progressContainer = document.getElementById('progress-container');
+    if (progressContainer) {
+        progressContainer.classList.remove('active');
+        setTimeout(() => {
+            if (progressContainer.parentNode) {
+                progressContainer.parentNode.removeChild(progressContainer);
+            }
+        }, 300);
+    }
+}

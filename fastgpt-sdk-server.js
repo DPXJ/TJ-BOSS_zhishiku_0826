@@ -27,11 +27,17 @@ app.post('/api/fastgpt/workflow/run', async (req, res) => {
         console.log('🔄 使用SDK风格调用工作流:', workflowId);
         console.log('📝 变量:', variables);
         
+        // 从请求头中获取API密钥，如果没有则使用配置的默认密钥
+        const authHeader = req.headers.authorization;
+        const apiKey = authHeader ? authHeader.replace('Bearer ', '') : FASTGPT_CONFIG.apiKey;
+        
+        console.log('🔑 使用API密钥:', apiKey ? `${apiKey.substring(0, 20)}...` : '未设置');
+        
         const response = await fetch(`${FASTGPT_CONFIG.baseURL}/api/workflow/run`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${FASTGPT_CONFIG.apiKey}`
+                'Authorization': `Bearer ${apiKey}`
             },
             body: JSON.stringify({
                 workflowId,
@@ -70,6 +76,12 @@ app.post('/api/fastgpt/v1/chat/completions', async (req, res) => {
         console.log('🔄 使用SDK风格调用聊天接口');
         console.log('📝 消息:', messages);
         
+        // 从请求头中获取API密钥，如果没有则使用配置的默认密钥
+        const authHeader = req.headers.authorization;
+        const apiKey = authHeader ? authHeader.replace('Bearer ', '') : FASTGPT_CONFIG.apiKey;
+        
+        console.log('🔑 使用API密钥:', apiKey ? `${apiKey.substring(0, 20)}...` : '未设置');
+        
         const requestBody = {
             messages,
             stream: false,
@@ -92,7 +104,7 @@ app.post('/api/fastgpt/v1/chat/completions', async (req, res) => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${FASTGPT_CONFIG.apiKey}`
+                'Authorization': `Bearer ${apiKey}`
             },
             body: JSON.stringify(requestBody)
         });
