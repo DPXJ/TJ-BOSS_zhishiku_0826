@@ -5,9 +5,11 @@
 const isLocalEnv = window.location.hostname === 'localhost' || 
                    window.location.hostname === '127.0.0.1';
 
-// 检测是否在Vercel环境
+// 检测是否在Vercel环境（包括自定义域名）
 const isVercelEnv = window.location.hostname.includes('vercel.app') || 
-                    window.location.hostname.includes('vercel.com');
+                    window.location.hostname.includes('vercel.com') ||
+                    window.location.hostname === 'www.ljszai.online' ||
+                    window.location.hostname === 'ljszai.online';
 
 // FastGPT API配置
 const API_BASE = isLocalEnv ? 'http://localhost:3001/api/fastgpt' : 'https://api.fastgpt.in/api';
