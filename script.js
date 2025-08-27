@@ -51,9 +51,26 @@ function copyToClipboardFallback(text) {
 const isLocalEnv = window.location.hostname === 'localhost' || 
                   window.location.hostname === '127.0.0.1';
 
+// 检测是否在Vercel环境（包括自定义域名）
+const isVercelEnv = window.location.hostname.includes('vercel.app') || 
+                    window.location.hostname.includes('vercel.com') ||
+                    window.location.hostname === 'www.ljszai.online' ||
+                    window.location.hostname === 'ljszai.online';
+
 const API_BASE = isLocalEnv ? 'http://localhost:3001/api/fastgpt' : 'https://api.fastgpt.in/api';
 
-console.log('🌐 当前环境:', isLocalEnv ? '本地开发' : '线上环境');
+// 环境检测和配置
+if (isLocalEnv) {
+    console.log('🌐 本地开发环境');
+    console.log('🚀 使用本地代理服务器');
+} else if (isVercelEnv) {
+    console.log('🌐 Vercel生产环境（自定义域名）');
+    console.log('🚀 使用Vercel无服务器函数');
+    console.log('✅ 开箱即用');
+} else {
+    console.log('🌐 其他线上环境');
+    console.log('🚀 直接调用API');
+}
 console.log('🌐 API_BASE:', API_BASE);
 
 // API配置 - 用户配置信息
@@ -2825,8 +2842,18 @@ async function syncToFeishuTable(accessToken) {
         recordData
     });
     
-    // 调用飞书多维表格API - 使用代理
-    const apiUrl = `http://localhost:3002/feishu-proxy/bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`;
+    // 根据环境选择多维表格API地址
+    let apiUrl;
+    if (isLocalEnv) {
+        // 本地环境：使用本地代理
+        apiUrl = `http://localhost:3002/feishu-proxy/bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`;
+    } else if (isVercelEnv) {
+        // Vercel环境（包括自定义域名）：使用相对路径
+        apiUrl = '/api/feishu-proxy?path=' + encodeURIComponent(`bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`);
+    } else {
+        // 其他环境：直接调用飞书API
+        apiUrl = `https://open.feishu.cn/open-apis/bitable/v1/apps/${API_CONFIG.FEISHU.appToken}/tables/${API_CONFIG.FEISHU.tableId}/records`;
+    }
     const requestOptions = {
         method: 'POST',
         headers: {
@@ -2954,8 +2981,6 @@ async function syncToFeishu() {
         console.error('飞书同步失败:', error);
         
         // 检查是否是CORS错误
-        const isLocalEnv = window.location.hostname === 'localhost' ||
-                          window.location.hostname === '127.0.0.1';
         
         if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
             showToast('网络连接失败，请检查网络连接或API配置', 'error');
@@ -3000,8 +3025,18 @@ async function getFeishuAccessToken() {
         throw new Error('请先配置飞书App ID和App Secret');
     }
     
-    // 本地环境使用代理服务器来避免CORS问题
-    const apiUrl = 'http://localhost:3002/feishu-proxy/auth/v3/tenant_access_token/internal';
+    // 根据环境选择API地址
+    let apiUrl;
+    if (isLocalEnv) {
+        // 本地环境：使用本地代理
+        apiUrl = 'http://localhost:3002/feishu-proxy/auth/v3/tenant_access_token/internal';
+    } else if (isVercelEnv) {
+        // Vercel环境（包括自定义域名）：使用相对路径
+        apiUrl = '/api/feishu-proxy?path=' + encodeURIComponent('auth/v3/tenant_access_token/internal');
+    } else {
+        // 其他环境：直接调用飞书API（可能遇到CORS问题）
+        apiUrl = 'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal';
+    }
     const requestBody = {
         app_id: API_CONFIG.FEISHU.appId,
         app_secret: API_CONFIG.FEISHU.appSecret
@@ -3062,8 +3097,18 @@ async function getFeishuAccessToken() {
 }
 
 async function createFeishuDoc(accessToken, title, content) {
-    // 飞书API通过代理调用创建文档
-    const apiUrl = 'http://localhost:3002/feishu-proxy/docx/v1/documents';
+    // 根据环境选择创建文档API地址
+    let apiUrl;
+    if (isLocalEnv) {
+        // 本地环境：使用本地代理
+        apiUrl = 'http://localhost:3002/feishu-proxy/docx/v1/documents';
+    } else if (isVercelEnv) {
+        // Vercel环境（包括自定义域名）：使用相对路径
+        apiUrl = '/api/feishu-proxy?path=' + encodeURIComponent('docx/v1/documents');
+    } else {
+        // 其他环境：直接调用飞书API
+        apiUrl = 'https://open.feishu.cn/open-apis/docx/v1/documents';
+    }
     const requestOptions = {
         method: 'POST',
         headers: {
@@ -3108,8 +3153,18 @@ async function updateFeishuDocContent(accessToken, docToken, content) {
     // 转换markdown为飞书文档格式
     const blocks = convertMarkdownToFeishuBlocks(content);
     
-    // 飞书API通过代理调用更新文档
-    const apiUrl = `http://localhost:3002/feishu-proxy/docx/v1/documents/${docToken}/blocks/batch_update`;
+    // 根据环境选择更新文档API地址
+    let apiUrl;
+    if (isLocalEnv) {
+        // 本地环境：使用本地代理
+        apiUrl = `http://localhost:3002/feishu-proxy/docx/v1/documents/${docToken}/blocks/batch_update`;
+    } else if (isVercelEnv) {
+        // Vercel环境（包括自定义域名）：使用相对路径
+        apiUrl = '/api/feishu-proxy?path=' + encodeURIComponent(`docx/v1/documents/${docToken}/blocks/batch_update`);
+    } else {
+        // 其他环境：直接调用飞书API
+        apiUrl = `https://open.feishu.cn/open-apis/docx/v1/documents/${docToken}/blocks/batch_update`;
+    }
     const requestOptions = {
         method: 'PATCH',
         headers: {
