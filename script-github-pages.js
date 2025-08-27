@@ -37,6 +37,55 @@ if (isLocalEnv) {
     console.log('🔧 建议部署到Vercel获得更好体验');
 }
 
+// 全局复制函数，供HTML onclick使用
+window.copyTestUrl = function() {
+    console.log('copyTestUrl函数被调用');
+    
+    const text = 'https://www.takungpao.com/consume/jiushui/2025/0603/1092252.html';
+    
+    // 尝试使用现代clipboard API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            console.log('复制成功');
+            showToast('已复制到剪贴板', 'success');
+        }).catch((err) => {
+            console.log('clipboard API失败，使用备用方法:', err);
+            copyToClipboardFallback(text);
+        });
+    } else {
+        console.log('clipboard API不可用，使用备用方法');
+        copyToClipboardFallback(text);
+    }
+};
+
+// 备用复制方法
+function copyToClipboardFallback(text) {
+    try {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        if (successful) {
+            console.log('备用复制方法成功');
+            showToast('已复制到剪贴板', 'success');
+        } else {
+            console.log('备用复制方法失败');
+            showToast('复制失败，请手动复制', 'error');
+        }
+    } catch (err) {
+        console.log('复制出错:', err);
+        showToast('复制失败，请手动复制', 'error');
+    }
+}
+
 // API配置 - 用户配置信息
 let API_CONFIG = {
     // 阿里云OSS配置
@@ -1644,34 +1693,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         }
     });
-    
-    // 备用复制方法
-    function copyToClipboardFallback(text) {
-        try {
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.position = 'fixed';
-            textArea.style.left = '-999999px';
-            textArea.style.top = '-999999px';
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            
-            const successful = document.execCommand('copy');
-            document.body.removeChild(textArea);
-            
-            if (successful) {
-                console.log('备用复制方法成功');
-                showToast('已复制到剪贴板', 'success');
-            } else {
-                console.log('备用复制方法失败');
-                showToast('复制失败，请手动复制', 'error');
-            }
-        } catch (err) {
-            console.log('复制出错:', err);
-            showToast('复制失败，请手动复制', 'error');
-        }
-    }
+
 });
 
 // 显示"功能完善中"弹窗
