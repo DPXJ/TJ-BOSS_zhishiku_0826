@@ -2258,8 +2258,25 @@ async function syncToFeishu() {
             showToast('已成功同步到飞书多维表格', 'success');
             
             // 询问是否打开表格
+            console.log('📋 准备打开飞书多维表格:', resultUrl);
             if (confirm('同步成功！是否打开飞书多维表格？')) {
-                window.open(resultUrl, '_blank');
+                try {
+                    const opened = window.open(resultUrl, '_blank');
+                    if (!opened) {
+                        console.warn('⚠️ 弹窗被阻止，尝试其他方式...');
+                        // 如果弹窗被阻止，复制链接到剪贴板
+                        navigator.clipboard.writeText(resultUrl).then(() => {
+                            showToast('弹窗被阻止，已复制链接到剪贴板', 'warning');
+                        }).catch(() => {
+                            showToast(`请手动打开链接：${resultUrl}`, 'info');
+                        });
+                    } else {
+                        console.log('✅ 成功打开飞书多维表格');
+                    }
+                } catch (error) {
+                    console.error('❌ 打开飞书表格失败:', error);
+                    showToast('打开失败，请手动访问飞书表格', 'error');
+                }
             }
         } else {
             // 同步到文档（保持原有功能）
@@ -2285,8 +2302,25 @@ async function syncToFeishu() {
             showToast('已成功同步到飞书文档', 'success');
             
             // 询问是否打开文档
+            console.log('📄 准备打开飞书文档:', resultUrl);
             if (confirm('同步成功！是否打开飞书文档？')) {
-                window.open(resultUrl, '_blank');
+                try {
+                    const opened = window.open(resultUrl, '_blank');
+                    if (!opened) {
+                        console.warn('⚠️ 弹窗被阻止，尝试其他方式...');
+                        // 如果弹窗被阻止，复制链接到剪贴板
+                        navigator.clipboard.writeText(resultUrl).then(() => {
+                            showToast('弹窗被阻止，已复制链接到剪贴板', 'warning');
+                        }).catch(() => {
+                            showToast(`请手动打开链接：${resultUrl}`, 'info');
+                        });
+                    } else {
+                        console.log('✅ 成功打开飞书文档');
+                    }
+                } catch (error) {
+                    console.error('❌ 打开飞书文档失败:', error);
+                    showToast('打开失败，请手动访问飞书文档', 'error');
+                }
             }
         }
         
